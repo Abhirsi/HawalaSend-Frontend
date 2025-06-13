@@ -1,0 +1,66 @@
+/* src/App.css */
+:root {
+  --color-primary: #282c34;
+  --color-secondary: #61dafb;
+  --color-text: #ffffff;
+  --animation-duration: 20s;
+  --font-size-base: calc(10px + 2vmin);
+}
+
+/* Base App Styles */
+.App {
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* Logo Styles */
+.App-logo {
+  height: 40vmin;
+  max-height: 300px;
+  min-height: 100px;
+  pointer-events: none;
+  user-select: none;
+  transition: transform 0.3s ease;
+}
+
+/* Animation for logo - respects reduced motion preference */
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin var(--animation-duration) linear infinite;
+  }
+  
+  .App-logo:hover {
+    animation-play-state: paused;
+  }
+}
+
+/* Header/Layout Styles */
+.App-header {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-size: var(--font-size-base);
+}
+
+.App-content {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Link Styles */
+.App-link {
+  color: var(--color-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  position: relative;
+  padding-bottom: 2px;
+}
