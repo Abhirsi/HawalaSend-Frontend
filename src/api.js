@@ -12,7 +12,7 @@ const getApiBaseUrl = () => {
       throw new Error('API configuration error');
     }
     console.warn('Using default development API URL');
-    return 'http://localhost:3001';
+    return 'https://money-transfer-backend.onrender.com';
   }
   
   return url.endsWith('/') ? url.slice(0, -1) : url;
