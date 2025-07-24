@@ -78,8 +78,8 @@ const Login = () => {
   return (
     <>
       <Helmet>
-        <title>Login | Secure App</title>
-        <meta name="description" content="Secure login portal" />
+        <title>Login | HawalaSend</title>
+        <meta name="description" content="Welcome to Hawala Send" />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 

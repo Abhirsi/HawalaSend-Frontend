@@ -50,11 +50,14 @@ const Register = () => {
     e.preventDefault();
 
     // Clean input values before submission
-    const trimmedData = {
-      username: formData.username.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
-    };
+
+  const trimmedData = {
+    name: formData.username.trim(), // ✅ Rename 'username' to 'name'
+    email: formData.email.trim(),
+    password: formData.password,
+  };
+
+
 
     // Basic validation
     if (trimmedData.password !== formData.confirmPassword) {

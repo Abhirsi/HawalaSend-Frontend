@@ -1,4 +1,6 @@
+// ✅ Load env vars early
 import './envValidator';
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -11,31 +13,21 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { SnackbarProvider } from 'notistack';
 
-// Material-UI theme setup
+// ✅ Material-UI theme setup
 const theme = createTheme({
   palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
+    primary: { main: '#1976d2' },
+    secondary: { main: '#dc004e' },
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
   },
 });
 
-// Service worker setup
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(() => console.log('ServiceWorker registered'))
-      .catch(err => console.warn('ServiceWorker registration failed', err));
-  });
-}
+// Service worker disabled for now
 
-// React root
+
+// ✅ React app mount
 const container = document.getElementById('root');
 const root = createRoot(container);
 
@@ -49,7 +41,6 @@ root.render(
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
           autoHideDuration={6000}
         >
-          {/* ✅ AuthProvider is now INSIDE SnackbarProvider */}
           <AuthProvider>
             <ErrorBoundary>
               <App />
@@ -61,5 +52,5 @@ root.render(
   </React.StrictMode>
 );
 
-// Web vitals reporting
+// ✅ Optional performance tracking
 reportWebVitals();

@@ -1,5 +1,6 @@
 {
-  "name": "frontend",
+  "name": "HawalaSend",
+  "short_name": "HawalaSend",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
