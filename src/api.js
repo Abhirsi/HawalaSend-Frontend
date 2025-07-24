@@ -162,7 +162,7 @@ function enhanceApiError(error) {
   const errorMessages = {
     400: 'Invalid request data',
     401: 'Session expired. Please login again.',
-    403: 'You don\'t have permission for this action',
+    403: 'You do not have permission for this action',
     404: 'Resource not found',
     429: 'Too many requests. Please wait before trying again.',
     500: 'Server error. Please try again later.'
