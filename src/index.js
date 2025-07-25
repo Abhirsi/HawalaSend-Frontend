@@ -26,15 +26,6 @@ const theme = createTheme({
   },
 });
 
-// Service worker setup
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(() => console.log('ServiceWorker registered'))
-      .catch(err => console.warn('ServiceWorker registration failed', err));
-  });
-}
-
 // React root
 const container = document.getElementById('root');
 const root = createRoot(container);
