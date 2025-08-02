@@ -1,6 +1,6 @@
 // frontend/src/api.js
 import axios from 'axios';
-import { getToken, setToken, clearToken } from './context/AuthContext';
+import { getToken, clearToken } from './context/AuthContext';
 
 // 1. Environment Configuration ==============================================
 const getApiBaseUrl = () => {
@@ -60,7 +60,7 @@ API.interceptors.response.use(
     
     // Store new token if returned in response
     if (response.data?.token) {
-      setToken(response.data.token);
+      authAPI.setToken(response.data.token);
     }
     
     return {
