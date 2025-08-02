@@ -21,12 +21,12 @@ const getApiBaseUrl = () => {
 // 2. Axios Instance Configuration ==========================================
 const API = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 15000, // 15s timeout (slightly longer for mobile)
+  timeout: 15000, // 15s timeout
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
-    'X-API-Version': '1.0' // For API versioning
+    'X-API-Version': '1.0'
   }
 });
 
@@ -36,10 +36,9 @@ API.interceptors.request.use(config => {
   
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    config.headers['X-CSRF-Protection'] = crypto.randomUUID(); // Stronger CSRF
+    config.headers['X-CSRF-Protection'] = crypto.randomUUID();
   }
 
-  // Add request timestamp for debugging
   config.headers['X-Request-Timestamp'] = Date.now();
   
   return config;
@@ -48,16 +47,20 @@ API.interceptors.request.use(config => {
   return Promise.reject(normalizeError(error, 'Network request failed'));
 });
 
-// 4. Response Interceptor ==================================================
+// 4. Enhanced Response Interceptor =========================================
 API.interceptors.response.use(
   response => {
-    // Log successful requests in development
     if (process.env.NODE_ENV === 'development') {
       console.debug(`API Success [${response.config.method?.toUpperCase()}]`, {
         url: response.config.url,
         status: response.status,
         data: response.data
       });
+    }
+    
+    // Store new token if returned in response
+    if (response.data?.token) {
+      setToken(response.data.token);
     }
     
     return {
@@ -69,21 +72,38 @@ API.interceptors.response.use(
       }
     };
   },
-  error => {
+  async error => {
+    const originalRequest = error.config;
     const normalizedError = normalizeError(error, 'API request failed');
     
-    // Handle specific status codes
+    // Handle token refresh on 401 errors
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshResponse = await axios.post(
+          `${getApiBaseUrl()}/auth/refresh-token`,
+          {},
+          { withCredentials: true }
+        );
+        
+        if (refreshResponse.data?.token) {
+          setToken(refreshResponse.data.token);
+          originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.token}`;
+          return API(originalRequest);
+        }
+      } catch (refreshError) {
+        clearToken();
+        window.location.assign('/login?session=expired');
+        return Promise.reject(normalizeError(refreshError, 'Session refresh failed'));
+      }
+    }
+    
+    // Handle other error cases
     if (error.response) {
       switch (error.response.status) {
-        case 401: // Authentication error
-          clearToken();
-          window.location.assign('/login?session=expired');
-          break;
-          
         case 429: // Rate limiting
-          retryAfterDelay(error);
-          break;
-          
+          return retryAfterDelay(error);
         case 503: // Service unavailable
           window.location.assign('/maintenance');
           break;
@@ -91,7 +111,7 @@ API.interceptors.response.use(
     }
     
     logError('API_ERROR', normalizedError);
-    return Promise.reject(normalizedError);
+    return Promise.reject(enhanceApiError(normalizedError));
   }
 );
 
@@ -114,7 +134,7 @@ export const authAPI = {
   register: createApiHandler('post', '/auth/register', userData => ({
     ...userData,
     email: userData.email.trim().toLowerCase(),
-    password: userData.password // Ensure password isn't logged
+    password: userData.password
   })),
   
   logout: async () => {
@@ -122,9 +142,7 @@ export const authAPI = {
       await API.post('/auth/logout');
     } finally {
       clearToken();
-      // Clear all temporary storage
       sessionStorage.clear();
-      if (window.indexedDB) indexedDB.databases().then(dbs => dbs.forEach(db => indexedDB.deleteDatabase(db.name)));
     }
   },
   
@@ -132,7 +150,10 @@ export const authAPI = {
     email: email.trim().toLowerCase()
   })),
   
-  verifySession: createApiHandler('get', '/auth/verify-session')
+  verifySession: createApiHandler('get', '/auth/verify-session'),
+  
+  // NEW: Add refresh token endpoint
+  refreshToken: () => API.post('/auth/refresh-token', {}, { withCredentials: true })
 };
 
 export const userAPI = {
@@ -184,7 +205,6 @@ function logError(type, error) {
   };
   
   if (process.env.NODE_ENV === 'production') {
-    // Send to error tracking service (Sentry/LogRocket)
     window.trackError?.(errorPayload);
   } else {
     console.groupCollapsed(`%c${type}`, 'color: #ff4444; font-weight: bold;');
@@ -205,28 +225,5 @@ const retryAfterDelay = (error) => {
   });
 };
 
-// Optional: Add offline detection
-let offlineInterceptor = null; // Declare it at the top of the file
-
-// Optional: Add offline detection
-window.addEventListener('offline', () => {
-  if (offlineInterceptor !== null) {
-    API.interceptors.request.eject(offlineInterceptor);
-  }
-
-  offlineInterceptor = API.interceptors.request.use(config => {
-    throw Object.assign(new Error('Network connection lost'), { code: 'OFFLINE' });
-  });
-
-  console.warn('⚠️ Offline mode activated – requests will fail until reconnected.');
-});
-
-// Optional: Add online recovery (recommended)
-window.addEventListener('online', () => {
-  if (offlineInterceptor !== null) {
-    API.interceptors.request.eject(offlineInterceptor);
-    offlineInterceptor = null;
-  }
-
-  console.info('✅ Back online – requests are restored.');
-});
+// Export the configured axios instance as default
+export default API;
