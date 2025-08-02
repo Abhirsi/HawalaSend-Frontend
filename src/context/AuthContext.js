@@ -210,6 +210,16 @@ export const useAuth = () => {
   return context;
 };
 
-export { AuthContext };
-export const getToken = safeStorage.getToken;
-export const clearToken = safeStorage.clearToken;
+// src/context/AuthContext.js
+
+// ... existing code ...
+
+// Update your exports at the bottom to include all needed methods
+export { 
+  AuthContext, 
+  AuthProvider, 
+  useAuth,
+  getToken: safeStorage.getToken,
+  clearToken: safeStorage.clearToken,
+  setToken: safeStorage.setToken // Add this if missing
+};
