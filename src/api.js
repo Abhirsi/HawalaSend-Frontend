@@ -33,13 +33,13 @@ const tokenManager = {
 
 // Axios instance configuration
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://money-transfer-backend.onrender.com',
+  baseURL: process.env.REACT_APP_API_URL || 'https://your-backend.railway.app', // Replace with your Railway backend URL
   timeout: 15000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
-    'X-API-Version': '1.0'
+    'X-API-Version': '1.0' // Verify this matches your backend's API version
   }
 });
 
@@ -63,7 +63,7 @@ API.interceptors.response.use(
       
       try {
         const response = await axios.post(
-          `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
+          `${process.env.REACT_APP_API_URL || 'https://your-backend.railway.app'}/auth/refresh-token`, // Update URL
           {},
           { withCredentials: true }
         );
@@ -75,7 +75,7 @@ API.interceptors.response.use(
         }
       } catch (refreshError) {
         tokenManager.clear();
-        window.location.href = '/login';
+        window.location.href = '/login'; // Ensure /login route exists in your frontend
       }
     }
     
@@ -83,7 +83,7 @@ API.interceptors.response.use(
   }
 );
 
-// API endpoints
+// Authentication API endpoints
 const authAPI = {
   login: (credentials) => API.post('/auth/login', credentials),
   register: (userData) => API.post('/auth/register', userData),
@@ -92,5 +92,12 @@ const authAPI = {
   verifySession: () => API.get('/auth/verify-session')
 };
 
+// User API endpoints (added to fix the missing userAPI export)
+const userAPI = {
+  getUser: (id) => API.get(`/users/${id}`), // Adjust endpoint to match your backend
+  updateUser: (id, userData) => API.put(`/users/${id}`, userData), // Adjust endpoint
+  deleteUser: (id) => API.delete(`/users/${id}`) // Adjust endpoint
+};
+
 export default API;
-export { authAPI };
+export { authAPI, userAPI }; // Export both authAPI and userAPI
