@@ -1,10 +1,19 @@
+// Save this as: src/components/LoadingSpinner.jsx
 import React from 'react';
+import { Box, CircularProgress } from '@mui/material';
 
 const LoadingSpinner = () => {
   return (
-    <div style={{ textAlign: 'center', padding: '2rem' }}>
-      <p>Loading...</p>
-    </div>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
+      }}
+    >
+      <CircularProgress />
+    </Box>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { transactionAPI } from '../api'; // Use your configured API
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -10,15 +10,21 @@ const Transactions = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:3001/transactions', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setTransactions(res.data);
+        // Use your configured API instead of raw axios
+        const response = await transactionAPI.getAll();
+        
+        // Handle the response structure from your backend
+        const transactionsData = response.data.transactions || response.data;
+        setTransactions(transactionsData);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching transactions:', error);
-        navigate('/login');
+        if (error.response?.status === 401) {
+          // Only redirect to login on auth errors
+          navigate('/login');
+        } else {
+          setLoading(false);
+        }
       }
     };
 
@@ -39,7 +45,8 @@ const Transactions = () => {
             <tr>
               <th>Date</th>
               <th>Amount</th>
-              <th>Receiver</th>
+              <th>Type</th>
+              <th>Other Party</th>
               <th>Description</th>
               <th>Status</th>
             </tr>
@@ -47,9 +54,10 @@ const Transactions = () => {
           <tbody>
             {transactions.map(tx => (
               <tr key={tx.id}>
-                <td>{new Date(tx.created_at).toLocaleString()}</td>
-                <td>${tx.amount}</td>
-                <td>{tx.receiver_username || tx.receiver_id}</td>
+                <td>{new Date(tx.createdAt).toLocaleString()}</td>
+                <td>${tx.amount.toFixed(2)}</td>
+                <td>{tx.type}</td>
+                <td>{tx.otherParty || tx.otherPartyEmail}</td>
                 <td>{tx.description || '-'}</td>
                 <td>{tx.status}</td>
               </tr>

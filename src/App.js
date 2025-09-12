@@ -1,82 +1,119 @@
-import React, { useEffect } from 'react';
-import ForgotPassword from './pages/ForgotPassword';
-import {
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-  Outlet
-} from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import theme from './styles/theme';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { AuthProvider, useAuth } from './context/AuthContext'; // Fixed import
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import Dashboard from './components/Dashboard';
 import Transfer from './pages/Transfer';
 import Transactions from './pages/Transactions';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import LoadingSpinner from './components/LoadingSpinner';
+import ForgotPassword from './pages/ForgotPassword';
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
 
-// Enhanced Protected Route (v6 syntax)
-const ProtectedRoute = () => {
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) return <LoadingSpinner />;
-
-  return currentUser ? (
-    <Outlet />
-  ) : (
-    <Navigate to="/login" state={{ from: location }} replace />
-  );
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!currentUser) {
+    console.log('No auth token found');
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
 };
 
-// Public Route (v6 syntax)
-const PublicRoute = () => {
+// Public Route Component (redirects to dashboard if already logged in)
+const PublicRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
-
-  if (loading) return <LoadingSpinner />;
-
-  return !currentUser ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (currentUser) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
 };
 
 function App() {
-  useEffect(() => {
-    // Token verification logic
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.log('No auth token found');
-    }
-  }, []);
-
   return (
     <ThemeProvider theme={theme}>
+      <CssBaseline />
       <AuthProvider>
         <Routes>
-          {/* Public Routes */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
-
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/transfer" element={<Transfer />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-          </Route>
-
-          {/* Redirects */}
+          {/* Public routes */}
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/forgot-password" 
+            element={
+              <PublicRoute>
+                <ForgotPassword />
+              </PublicRoute>
+            } 
+          />
+          
+          {/* Protected routes */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/transfer" 
+            element={
+              <ProtectedRoute>
+                <Transfer />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/transactions" 
+            element={
+              <ProtectedRoute>
+                <Transactions />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
-          {/* 404 Handler */}
-          <Route path="*" element={
-            <div className="not-found">
-              <h1>404 - Page Not Found</h1>
-              <p>The requested URL was not found.</p>
-            </div>
-          } />
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>
     </ThemeProvider>

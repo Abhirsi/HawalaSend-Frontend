@@ -1,143 +1,201 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api';
 import {
+  Container,
+  Paper,
   TextField,
   Button,
-  Container,
-  Box,
   Typography,
+  Box,
   Alert,
-  Link as MuiLink,
   CircularProgress,
   InputAdornment,
-  IconButton,
+  IconButton
 } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
-import { Helmet } from 'react-helmet';
-
+import {
+  Email as EmailIcon,
+  Lock as LockIcon,
+  Visibility,
+  VisibilityOff,
+  Login as LoginIcon
+} from '@mui/icons-material';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { currentUser, login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    showPassword: false,
+    password: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { setCurrentUser } = useContext(AuthContext);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
+  console.log('Login component - currentUser:', currentUser);
+
+  // Redirect if already logged in
   useEffect(() => {
-    // Check existing session via API
-    authAPI.verifySession().then(hasSession => {
-      if (hasSession) navigate('/dashboard', { replace: true });
-    });
-  }, [navigate]);
+    if (currentUser) {
+      console.log('User already logged in, redirecting to dashboard');
+      navigate('/dashboard');
+    }
+  }, [currentUser, navigate]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
+    if (error) setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     
-    // Client-side validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      return setError('Please enter a valid email');
-    }
-    if (formData.password.length < 8) {
-      return setError('Password must be at least 8 characters');
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
     }
 
     setLoading(true);
+    setError('');
+
     try {
-      const { user } = await authAPI.login({
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-      });
+      console.log('Attempting login for:', formData.email);
       
-      setCurrentUser(user);
-      navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
+      const response = await authAPI.login(formData.email, formData.password);
+      
+      console.log('Login response:', response.data);
+      console.log('Full response structure:', JSON.stringify(response.data, null, 2));
+      
+      if (response.data.token && response.data.user) {
+        const { token, user } = response.data;
+        
+        console.log('Extracted token:', token);
+        console.log('Extracted user:', user);
+        
+        // Manual storage for debugging
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        console.log('Stored in localStorage - Token:', localStorage.getItem('authToken'));
+        console.log('Stored in localStorage - User:', localStorage.getItem('user'));
+        
+        // Use the login function from AuthContext
+        login(user, token);
+        
+        console.log('AuthContext login called');
+        
+        // Give a small delay to ensure state updates
+        setTimeout(() => {
+          console.log('Current user after login:', currentUser);
+          console.log('Redirecting to dashboard...');
+          navigate('/dashboard');
+        }, 100);
+        
+      } else {
+        console.log('Login missing token or user:', response.data);
+        setError(response.data.message || 'Login failed - missing credentials');
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Authentication failed');
       console.error('Login error:', err);
+      console.error('Error response:', err.response?.data);
+      
+      if (err.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Network error. Please check your connection and try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
   const togglePasswordVisibility = () => {
-    setFormData(prev => ({ ...prev, showPassword: !prev.showPassword }));
+    setShowPassword(!showPassword);
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Login | HawalaSend</title>
-        <meta name="description" content="Welcome to Hawala Send" />
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
+    <Container component="main" maxWidth="sm">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography component="h1" variant="h4" gutterBottom>
+              Welcome Back
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in to your HawalaSend account
+            </Typography>
+          </Box>
 
-      <Container maxWidth="sm" sx={{ py: 8 }}>
-        <Box sx={{ 
-          p: 4, 
-          borderRadius: 2, 
-          boxShadow: 3,
-          bgcolor: 'background.paper'
-        }}>
-          <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700 }}>
-            Secure Login
-          </Typography>
-          
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
-              fullWidth
               margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
               name="email"
-              label="Email"
-              type="email"
-              autoComplete="username"
+              autoComplete="email"
+              autoFocus
               value={formData.email}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Email color="action" />
+                    <EmailIcon />
                   </InputAdornment>
                 ),
               }}
             />
-
+            
             <TextField
-              fullWidth
               margin="normal"
+              required
+              fullWidth
               name="password"
               label="Password"
-              type={formData.showPassword ? 'text' : 'password'}
+              type={showPassword ? 'text' : 'password'}
+              id="password"
               autoComplete="current-password"
               value={formData.password}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock color="action" />
+                    <LockIcon />
                   </InputAdornment>
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={togglePasswordVisibility} edge="end">
-                      {formData.showPassword ? <VisibilityOff /> : <Visibility />}
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={togglePasswordVisibility}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
@@ -148,25 +206,35 @@ const Login = () => {
               type="submit"
               fullWidth
               variant="contained"
-              size="large"
               disabled={loading}
-              sx={{ mt: 3, py: 1.5 }}
+              startIcon={loading ? <CircularProgress size={20} /> : <LoginIcon />}
+              sx={{ mt: 3, mb: 2, py: 1.5 }}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign In'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </Button>
 
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-              <MuiLink component={Link} to="/forgot-password" variant="body2">
-                Forgot password?
-              </MuiLink>
-              <MuiLink component={Link} to="/register" variant="body2">
-                Create account
-              </MuiLink>
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
+                <Typography variant="body2" color="primary">
+                  Forgot your password?
+                </Typography>
+              </Link>
+            </Box>
+
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2">
+                Don't have an account?{' '}
+                <Link to="/register" style={{ textDecoration: 'none' }}>
+                  <Typography component="span" color="primary">
+                    Sign up here
+                  </Typography>
+                </Link>
+              </Typography>
             </Box>
           </Box>
-        </Box>
-      </Container>
-    </>
+        </Paper>
+      </Box>
+    </Container>
   );
 };
 

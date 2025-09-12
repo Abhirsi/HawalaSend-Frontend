@@ -1,156 +1,110 @@
-// src/context/AuthContext.js
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-} from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../api';
+const AuthContext = createContext();
 
-// Safe token management using both localStorage and sessionStorage
-const safeStorage = {
-  getToken: () => {
-    try {
-      return (
-        localStorage.getItem('authToken') ||
-        sessionStorage.getItem('authToken')
-      );
-    } catch (error) {
-      console.error('Storage access error:', error);
-      return null;
-    }
-  },
-
-  setToken: (token, remember) => {
-    try {
-      remember
-        ? localStorage.setItem('authToken', token)
-        : sessionStorage.setItem('authToken', token);
-    } catch (error) {
-      console.error('Storage set error:', error);
-    }
-  },
-
-  clearToken: () => {
-    try {
-      localStorage.removeItem('authToken');
-      sessionStorage.removeItem('authToken');
-    } catch (error) {
-      console.error('Storage clear error:', error);
-    }
-  },
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
-// 🔐 Authentication context definition with default methods
-const AuthContext = createContext({
-  currentUser: null,
-  loading: true,
-  isAuthenticated: false,
-  login: () => Promise.resolve(),
-  register: () => Promise.resolve(),
-  logout: () => {},
-  updateProfile: () => Promise.resolve(),
-});
-
-// 🌍 Context provider wrapping the app
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  // 🔁 Check authentication state
-  const checkAuthState = useCallback(async () => {
-    try {
-      const token = safeStorage.getToken();
-      if (token) {
-        const user = await authAPI.getProfile();
-        setCurrentUser(user);
+  // Safe storage helper
+  const safeStorage = {
+    getItem: (key) => {
+      try {
+        return localStorage.getItem(key);
+      } catch (error) {
+        console.error('Error reading from localStorage:', error);
+        return null;
       }
-    } catch (error) {
-      console.error('Auth verification failed:', error);
-      safeStorage.clearToken();
-    } finally {
-      setLoading(false);
+    },
+    setItem: (key, value) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch (error) {
+        console.error('Error writing to localStorage:', error);
+      }
+    },
+    removeItem: (key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error('Error removing from localStorage:', error);
+      }
     }
+  };
+
+  // Check for existing session on mount
+  useEffect(() => {
+    console.log('AuthContext: Checking existing session');
+    const token = safeStorage.getItem('authToken');
+    const userData = safeStorage.getItem('user');
+    
+    console.log('Token exists:', !!token);
+    console.log('User data exists:', !!userData);
+    
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        console.log('AuthContext: Restored user session', parsedUser);
+        setCurrentUser(parsedUser);
+      } catch (error) {
+        console.error('AuthContext: Error parsing user data', error);
+        // Clear invalid data
+        safeStorage.removeItem('authToken');
+        safeStorage.removeItem('user');
+      }
+    } else if (token && !userData) {
+      // Token exists but no user data - this shouldn't happen
+      console.log('AuthContext: Token exists but no user data - clearing session');
+      safeStorage.removeItem('authToken');
+    }
+    
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    checkAuthState();
-
-    // 🔄 Optional: Re-check every 5 minutes
-    const interval = setInterval(checkAuthState, 300000);
-    return () => clearInterval(interval);
-  }, [checkAuthState]);
-
-  // 🔓 Login function
-  const login = async (credentials, remember = true) => {
-    try {
-      setLoading(true);
-      const { token, user } = await authAPI.login(credentials);
-      safeStorage.setToken(token, remember);
-      setCurrentUser(user);
-      return user;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error(error.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const login = (userData, token) => {
+    console.log('AuthContext: Logging in user', userData);
+    
+    // Store both token and user data
+    safeStorage.setItem('authToken', token);
+    safeStorage.setItem('user', JSON.stringify(userData));
+    
+    setCurrentUser(userData);
   };
 
-  // 📝 Register function
-  const register = async (userData) => {
-    try {
-      setLoading(true);
-      const { token, user } = await authAPI.register(userData);
-      safeStorage.setToken(token, true);
-      setCurrentUser(user);
-      return user;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw new Error(error.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const logout = () => {
+    console.log('AuthContext: Logging out user');
+    
+    // Clear all auth data
+    safeStorage.removeItem('authToken');
+    safeStorage.removeItem('user');
+    
+    setCurrentUser(null);
   };
 
-  // 🚪 Logout function
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } finally {
-      safeStorage.clearToken();
-      setCurrentUser(null);
-      navigate('/login', { replace: true });
-
-      // 🧹 Clear any session data
-      if (window.sessionStorage) sessionStorage.clear();
-    }
-  };
-
-  // 🛠 Update user profile
-  const updateProfile = async (userData) => {
-    try {
-      const updatedUser = await authAPI.updateProfile(userData);
-      setCurrentUser(updatedUser);
-      return updatedUser;
-    } catch (error) {
-      console.error('Profile update error:', error);
-      throw new Error(error.message || 'Update failed. Please try again.');
-    }
+  const updateUser = (updatedUserData) => {
+    console.log('AuthContext: Updating user data', updatedUserData);
+    
+    // Update user data in both state and storage
+    const newUserData = { ...currentUser, ...updatedUserData };
+    safeStorage.setItem('user', JSON.stringify(newUserData));
+    setCurrentUser(newUserData);
   };
 
   const value = {
     currentUser,
-    loading,
-    isAuthenticated: !!currentUser,
     login,
-    register,
     logout,
-    updateProfile,
+    updateUser,
+    loading,
+    isAuthenticated: !!currentUser
   };
 
   return (
@@ -160,16 +114,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// 🔌 Custom hook to access auth context easily
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-// 🧩 Export AuthContext and storage helpers for other components/modules
-export { AuthContext };
-export const getToken = safeStorage.getToken;
-export const clearToken = safeStorage.clearToken;
+export default AuthContext;

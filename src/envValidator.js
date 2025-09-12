@@ -95,7 +95,7 @@ const validateEnv = () => {
         // Set development defaults for required variables
         switch (varName) {
           case 'REACT_APP_API_URL':
-            process.env[varName] = 'http://localhost:3001';
+            process.env[varName] = 'http://localhost:5000';
             break;
           case 'REACT_APP_STRIPE_PUBLIC_KEY':
             process.env[varName] = 'pk_test_mockkey';
@@ -139,7 +139,7 @@ export const getEnvHelp = () => {
 
   // Required variables documentation
   Object.entries(envConfig.required).forEach(([varName, config]) => {
-    helpText += `• ${varName} (${config.type})\n`;
+    helpText += `â€¢ ${varName} (${config.type})\n`;
     helpText += `  Description: ${config.description}\n`;
     helpText += `  Example: ${varName}=${config.example}\n\n`;
   });
@@ -147,7 +147,7 @@ export const getEnvHelp = () => {
   helpText += '=== OPTIONAL VARIABLES ===\n';
   // Optional variables documentation
   Object.entries(envConfig.optional).forEach(([varName, config]) => {
-    helpText += `• ${varName} (${config.type})\n`;
+    helpText += `â€¢ ${varName} (${config.type})\n`;
     helpText += `  Description: ${config.description}\n`;
     if (config.requiredIn) {
       helpText += `  Required in: ${config.requiredIn.join(', ')}\n`;
@@ -167,11 +167,11 @@ try {
 } catch (error) {
   // In production, fail fast and exit
   if (process.env.NODE_ENV === 'production') {
-    console.error('❌ Critical Environment Error:', error.message);
+    console.error('âŒ Critical Environment Error:', error.message);
     process.exit(1);
   }
   // In development, log but continue
-  console.error('⚠️ Environment Warning:', error.message);
+  console.error('âš ï¸ Environment Warning:', error.message);
 }
 
 export default validateEnv;
