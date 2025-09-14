@@ -2,75 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { transferAPI } from '../api';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Stepper,
-  Step,
-  StepLabel,
-  Alert,
-  InputAdornment,
-  CircularProgress,
-  Grid,
-  Card,
-  CardContent,
-  Divider
-} from '@mui/material';
-import {
-  Send as SendIcon,
-  Person as PersonIcon,
-  AttachMoney as MoneyIcon,
-  Check as CheckIcon,
-  ArrowBack
-} from '@mui/icons-material';
 
 const Transfer = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [balance, setBalance] = useState(2500.00); // Mock balance - will be updated from API
-  
-  const steps = ['Enter Details', 'Review & Confirm', 'Complete'];
+  const [currentStep, setCurrentStep] = useState(1);
+  const [balance, setBalance] = useState(2500.00);
   
   const [transferData, setTransferData] = useState({
     recipientEmail: '',
-    recipientName: '',
     amount: '',
     description: '',
     pin: ''
   });
-
+  
   const [validationErrors, setValidationErrors] = useState({});
+  const [transferResult, setTransferResult] = useState(null);
 
-  // Fetch balance and check authentication
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
-      return;
     }
-    
-    // Fetch actual balance from backend
-    const fetchBalance = async () => {
-      try {
-        // For now, we'll use the mock balance
-        // TODO: Implement getBalance endpoint
-        // const response = await transferAPI.getBalance();
-        // setBalance(response.data.balance);
-        console.log('Using mock balance for now');
-      } catch (error) {
-        console.error('Failed to fetch balance:', error);
-      }
-    };
-    
-    fetchBalance();
   }, [currentUser, navigate]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -80,350 +41,760 @@ const Transfer = () => {
       setValidationErrors(prev => ({ ...prev, [name]: '' }));
     }
     
-    // Special handling for amount field
+    // Special handling for amount (numbers only with decimal)
     if (name === 'amount') {
-      // Only allow numbers and decimal point
-      const regex = /^\d*\.?\d{0,2}$/;
-      if (regex.test(value) || value === '') {
-        setTransferData(prev => ({ ...prev, [name]: value }));
+      const numericValue = value.replace(/[^0-9.]/g, '');
+      if (numericValue.split('.').length <= 2) {
+        setTransferData(prev => ({ ...prev, [name]: numericValue }));
       }
+    } else if (name === 'pin') {
+      // PIN: numbers only, max 6 digits
+      const numericValue = value.replace(/[^0-9]/g, '').slice(0, 6);
+      setTransferData(prev => ({ ...prev, [name]: numericValue }));
     } else {
       setTransferData(prev => ({ ...prev, [name]: value }));
     }
   };
 
-  const validateStep1 = () => {
+  const validateStep = (step) => {
     const errors = {};
     
-    // Validate email
-    if (!transferData.recipientEmail) {
-      errors.recipientEmail = 'Recipient email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(transferData.recipientEmail)) {
-      errors.recipientEmail = 'Please enter a valid email';
-    } else if (transferData.recipientEmail.toLowerCase() === currentUser?.email?.toLowerCase()) {
-      errors.recipientEmail = 'Cannot transfer to yourself';
+    if (step >= 1) {
+      if (!transferData.recipientEmail) {
+        errors.recipientEmail = 'Recipient email is required';
+      } else if (!/\S+@\S+\.\S+/.test(transferData.recipientEmail)) {
+        errors.recipientEmail = 'Please enter a valid email address';
+      } else if (transferData.recipientEmail.toLowerCase() === currentUser?.email?.toLowerCase()) {
+        errors.recipientEmail = 'Cannot send money to yourself';
+      }
+      
+      if (!transferData.amount) {
+        errors.amount = 'Amount is required';
+      } else if (parseFloat(transferData.amount) <= 0) {
+        errors.amount = 'Amount must be greater than 0';
+      } else if (parseFloat(transferData.amount) > balance) {
+        errors.amount = 'Insufficient funds';
+      } else if (parseFloat(transferData.amount) > 10000) {
+        errors.amount = 'Maximum transfer amount is $10,000';
+      }
     }
     
-    // Validate amount
-    const amount = parseFloat(transferData.amount);
-    if (!transferData.amount) {
-      errors.amount = 'Amount is required';
-    } else if (isNaN(amount) || amount <= 0) {
-      errors.amount = 'Please enter a valid amount';
-    } else if (amount > balance) {
-      errors.amount = 'Insufficient balance';
-    } else if (amount < 1) {
-      errors.amount = 'Minimum transfer amount is $1.00';
-    } else if (amount > 10000) {
-      errors.amount = 'Maximum transfer amount is $10,000.00';
+    if (step >= 2) {
+      if (!transferData.pin) {
+        errors.pin = 'PIN is required';
+      } else if (transferData.pin.length < 4) {
+        errors.pin = 'PIN must be at least 4 digits';
+      }
     }
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(prev => prev - 1);
+    setValidationErrors({});
+  };
+
   const processTransfer = async () => {
+    if (!validateStep(2)) return;
+    
     setLoading(true);
-    setError('');
     
     try {
-      console.log('About to send transfer with PIN:', transferData.pin);
-      
-      // Make real API call to backend
       const response = await transferAPI.send({
         recipient_email: transferData.recipientEmail,
         amount: parseFloat(transferData.amount),
-        description: transferData.description,
-        pin: String(transferData.pin) // Ensure PIN is sent as string
+        description: transferData.description || 'Money transfer',
+        pin: transferData.pin
       });
       
-      console.log('Transfer API response:', response.data);
-      
       if (response.data.success) {
-        setSuccess(true);
-        // Update local balance with new balance from server
-        if (response.data.newBalance !== undefined) {
-          setBalance(response.data.newBalance);
-        } else {
-          // Fallback: subtract amount from current balance
-          setBalance(prev => prev - parseFloat(transferData.amount));
-        }
-        
-        console.log('Transfer successful:', response.data);
+        setTransferResult({
+          success: true,
+          transaction: response.data.transaction,
+          newBalance: response.data.newBalance
+        });
+        setBalance(response.data.newBalance);
+        setCurrentStep(3);
       } else {
-        setError(response.data.message || 'Transfer failed');
+        setValidationErrors({ general: response.data.error || 'Transfer failed' });
       }
-      
-    } catch (err) {
-      console.error('Transfer failed:', err);
-      console.error('Error response:', err.response?.data);
-      setError(err.response?.data?.error || err.response?.data?.message || 'Transfer failed. Please try again.');
-      setActiveStep(1); // Go back to confirmation step
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Transfer failed. Please try again.';
+      setValidationErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNext = () => {
-    if (activeStep === 0) {
-      if (!validateStep1()) return;
-    } else if (activeStep === 1) {
-      if (!transferData.pin || transferData.pin.length < 4) {
-        setError('Please enter your 4-digit PIN');
-        return;
-      }
-    }
-    
-    setError('');
-    setActiveStep(prev => prev + 1);
-    
-    if (activeStep === 1) {
-      // Process transfer
-      processTransfer();
-    }
-  };
-
-  const handleBack = () => {
-    setActiveStep(prev => prev - 1);
-    setError('');
-  };
-
   const handleNewTransfer = () => {
     setTransferData({
       recipientEmail: '',
-      recipientName: '',
       amount: '',
       description: '',
       pin: ''
     });
-    setActiveStep(0);
-    setSuccess(false);
-    setError('');
     setValidationErrors({});
+    setTransferResult(null);
+    setCurrentStep(1);
   };
 
-  return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => navigate('/dashboard')}
-        sx={{ mb: 2 }}
-      >
-        Back to Dashboard
-      </Button>
+  const renderStepIndicator = () => (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      marginBottom: '2rem',
+      gap: '1rem'
+    }}>
+      {[1, 2, 3].map(step => (
+        <div key={step} style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: currentStep >= step ? '#0ea5e9' : '#e5e5e5',
+            color: currentStep >= step ? 'white' : '#737373',
+            fontWeight: '600',
+            fontSize: '0.875rem',
+            transition: 'all 0.2s ease'
+          }}>
+            {step}
+          </div>
+          <span style={{
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            color: currentStep >= step ? '#0ea5e9' : '#737373'
+          }}>
+            {step === 1 ? 'Details' : step === 2 ? 'Confirm' : 'Complete'}
+          </span>
+          {step < 3 && (
+            <div style={{
+              width: '2rem',
+              height: '2px',
+              background: currentStep > step ? '#0ea5e9' : '#e5e5e5',
+              transition: 'all 0.2s ease'
+            }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom align="center">
-          Send Money
-        </Typography>
-        
-        {/* Balance Display */}
-        <Card sx={{ mb: 3, bgcolor: 'primary.main', color: 'white' }}>
-          <CardContent>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              Available Balance
-            </Typography>
-            <Typography variant="h5">
-              ${balance.toFixed(2)}
-            </Typography>
-          </CardContent>
-        </Card>
+  const renderStep1 = () => (
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+      <h2 style={{
+        fontSize: '1.5rem',
+        fontWeight: '700',
+        color: '#171717',
+        marginBottom: '1.5rem',
+        textAlign: 'center'
+      }}>
+        Transfer Details
+      </h2>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Recipient Email
+          </label>
+          <input
+            type="email"
+            name="recipientEmail"
+            value={transferData.recipientEmail}
+            onChange={handleInputChange}
+            placeholder="Enter recipient's email address"
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              border: `2px solid ${validationErrors.recipientEmail ? '#ef4444' : '#e5e5e5'}`,
+              borderRadius: '12px',
+              fontSize: '1rem',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+            onFocus={(e) => {
+              if (!validationErrors.recipientEmail) {
+                e.target.style.borderColor = '#0ea5e9';
+              }
+            }}
+            onBlur={(e) => {
+              if (!validationErrors.recipientEmail) {
+                e.target.style.borderColor = '#e5e5e5';
+              }
+            }}
+          />
+          {validationErrors.recipientEmail && (
+            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+              {validationErrors.recipientEmail}
+            </span>
+          )}
+        </div>
 
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Step 1: Enter Details */}
-        {activeStep === 0 && (
-          <Box>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  name="recipientEmail"
-                  label="Recipient Email"
-                  type="email"
-                  value={transferData.recipientEmail}
-                  onChange={handleInputChange}
-                  error={!!validationErrors.recipientEmail}
-                  helperText={validationErrors.recipientEmail}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  name="amount"
-                  label="Amount"
-                  value={transferData.amount}
-                  onChange={handleInputChange}
-                  error={!!validationErrors.amount}
-                  helperText={validationErrors.amount || 'Minimum $1.00, Maximum $10,000.00'}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <MoneyIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  name="description"
-                  label="Description (Optional)"
-                  multiline
-                  rows={3}
-                  value={transferData.description}
-                  onChange={handleInputChange}
-                  helperText="Add a note for the recipient"
-                />
-              </Grid>
-            </Grid>
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                startIcon={<SendIcon />}
-                size="large"
-              >
-                Continue
-              </Button>
-            </Box>
-          </Box>
-        )}
-
-        {/* Step 2: Review & Confirm */}
-        {activeStep === 1 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Review Transfer Details
-            </Typography>
-            
-            <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Sending to
-                  </Typography>
-                  <Typography variant="body1">
-                    {transferData.recipientEmail}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Divider />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Amount
-                  </Typography>
-                  <Typography variant="h5" color="primary">
-                    ${parseFloat(transferData.amount).toFixed(2)}
-                  </Typography>
-                </Grid>
-                
-                {transferData.description && (
-                  <>
-                    <Grid item xs={12}>
-                      <Divider />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">
-                        Description
-                      </Typography>
-                      <Typography variant="body1">
-                        {transferData.description}
-                      </Typography>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </Paper>
-
-            <TextField
-              fullWidth
-              name="pin"
-              label="Enter your 4-digit PIN to confirm"
-              type="password"
-              value={transferData.pin}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Amount
+          </label>
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute',
+              left: '1rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#737373',
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}>
+              $
+            </span>
+            <input
+              type="text"
+              name="amount"
+              value={transferData.amount}
               onChange={handleInputChange}
-              inputProps={{ maxLength: 4 }}
-              helperText="Enter your transaction PIN"
-              sx={{ mb: 3 }}
+              placeholder="0.00"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem 0.75rem 2rem',
+                border: `2px solid ${validationErrors.amount ? '#ef4444' : '#e5e5e5'}`,
+                borderRadius: '12px',
+                fontSize: '1rem',
+                transition: 'all 0.2s ease',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+              onFocus={(e) => {
+                if (!validationErrors.amount) {
+                  e.target.style.borderColor = '#0ea5e9';
+                }
+              }}
+              onBlur={(e) => {
+                if (!validationErrors.amount) {
+                  e.target.style.borderColor = '#e5e5e5';
+                }
+              }}
             />
+          </div>
+          {validationErrors.amount && (
+            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+              {validationErrors.amount}
+            </span>
+          )}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '0.5rem',
+            fontSize: '0.75rem',
+            color: '#737373'
+          }}>
+            <span>Available balance: {formatCurrency(balance)}</span>
+            <span>Max: $10,000</span>
+          </div>
+        </div>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                disabled={loading || !transferData.pin}
-                startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
-              >
-                {loading ? 'Processing...' : 'Confirm Transfer'}
-              </Button>
-            </Box>
-          </Box>
-        )}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Description (Optional)
+          </label>
+          <textarea
+            name="description"
+            value={transferData.description}
+            onChange={handleInputChange}
+            placeholder="What's this transfer for?"
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              border: '2px solid #e5e5e5',
+              borderRadius: '12px',
+              fontSize: '1rem',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+              fontFamily: 'inherit'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#0ea5e9'}
+            onBlur={(e) => e.target.style.borderColor = '#e5e5e5'}
+          />
+        </div>
+      </div>
+    </div>
+  );
 
-        {/* Step 3: Complete */}
-        {activeStep === 2 && success && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CheckIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
-              Transfer Successful!
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-              ${parseFloat(transferData.amount).toFixed(2)} has been sent to
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {transferData.recipientEmail}
-            </Typography>
-            
-            <Box sx={{ mt: 4 }}>
-              <Button
-                variant="contained"
-                onClick={handleNewTransfer}
-                sx={{ mr: 2 }}
-              >
-                New Transfer
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/transactions')}
-              >
-                View Transactions
-              </Button>
-            </Box>
-          </Box>
+  const renderStep2 = () => (
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+      <h2 style={{
+        fontSize: '1.5rem',
+        fontWeight: '700',
+        color: '#171717',
+        marginBottom: '1.5rem',
+        textAlign: 'center'
+      }}>
+        Confirm Transfer
+      </h2>
+
+      {/* Transfer Summary */}
+      <div style={{
+        background: '#f8fafc',
+        border: '1px solid #e5e5e5',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        marginBottom: '1.5rem'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>To:</span>
+            <span style={{ fontWeight: '600', color: '#171717' }}>{transferData.recipientEmail}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>Amount:</span>
+            <span style={{ fontWeight: '700', color: '#171717', fontSize: '1.125rem' }}>
+              {formatCurrency(parseFloat(transferData.amount || 0))}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>Fee:</span>
+            <span style={{ fontWeight: '600', color: '#737373' }}>
+              {formatCurrency(parseFloat(transferData.amount || 0) * 0.01)}
+            </span>
+          </div>
+          <div style={{ height: '1px', background: '#e5e5e5', margin: '0.5rem 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#171717', fontWeight: '600' }}>Total:</span>
+            <span style={{ fontWeight: '700', color: '#171717', fontSize: '1.125rem' }}>
+              {formatCurrency(parseFloat(transferData.amount || 0) * 1.01)}
+            </span>
+          </div>
+          {transferData.description && (
+            <>
+              <div style={{ height: '1px', background: '#e5e5e5', margin: '0.5rem 0' }} />
+              <div>
+                <span style={{ color: '#737373', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>Description:</span>
+                <span style={{ color: '#171717' }}>{transferData.description}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* PIN Input */}
+      <div>
+        <label style={{
+          display: 'block',
+          fontSize: '0.875rem',
+          fontWeight: '600',
+          color: '#374151',
+          marginBottom: '0.5rem'
+        }}>
+          Enter your PIN to confirm
+        </label>
+        <input
+          type="text"
+          name="pin"
+          value={transferData.pin}
+          onChange={handleInputChange}
+          placeholder="Enter 4-6 digit PIN"
+          maxLength={6}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            border: `2px solid ${validationErrors.pin ? '#ef4444' : '#e5e5e5'}`,
+            borderRadius: '12px',
+            fontSize: '1rem',
+            textAlign: 'center',
+            letterSpacing: '0.25rem',
+            transition: 'all 0.2s ease',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
+          onFocus={(e) => {
+            if (!validationErrors.pin) {
+              e.target.style.borderColor = '#0ea5e9';
+            }
+          }}
+          onBlur={(e) => {
+            if (!validationErrors.pin) {
+              e.target.style.borderColor = '#e5e5e5';
+            }
+          }}
+        />
+        {validationErrors.pin && (
+          <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+            {validationErrors.pin}
+          </span>
         )}
-      </Paper>
-    </Container>
+        <p style={{
+          fontSize: '0.75rem',
+          color: '#737373',
+          marginTop: '0.5rem',
+          textAlign: 'center'
+        }}>
+          For demo purposes, use PIN: 1234
+        </p>
+      </div>
+
+      {validationErrors.general && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginTop: '1rem'
+        }}>
+          <span style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+            {validationErrors.general}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div style={{ 
+      animation: 'zoomIn 0.5s ease-out',
+      textAlign: 'center'
+    }}>
+      <div style={{
+        width: '80px',
+        height: '80px',
+        borderRadius: '50%',
+        background: '#f0fdf4',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 1.5rem auto',
+        fontSize: '2.5rem'
+      }}>
+        ✅
+      </div>
+
+      <h2 style={{
+        fontSize: '1.5rem',
+        fontWeight: '700',
+        color: '#171717',
+        marginBottom: '0.5rem'
+      }}>
+        Transfer Successful!
+      </h2>
+
+      <p style={{
+        color: '#737373',
+        marginBottom: '2rem',
+        fontSize: '1rem'
+      }}>
+        Your money has been sent successfully
+      </p>
+
+      <div style={{
+        background: '#f8fafc',
+        border: '1px solid #e5e5e5',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        marginBottom: '2rem'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>Amount Sent:</span>
+            <span style={{ fontWeight: '700', color: '#22c55e', fontSize: '1.125rem' }}>
+              {formatCurrency(parseFloat(transferData.amount || 0))}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>To:</span>
+            <span style={{ fontWeight: '600', color: '#171717' }}>{transferData.recipientEmail}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>New Balance:</span>
+            <span style={{ fontWeight: '600', color: '#171717' }}>
+              {formatCurrency(transferResult?.newBalance || balance)}
+            </span>
+          </div>
+          {transferResult?.transaction?.id && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Transaction ID:</span>
+              <span style={{ fontWeight: '600', color: '#171717', fontSize: '0.875rem' }}>
+                #{transferResult.transaction.id}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '1rem'
+      }}>
+        <button
+          onClick={handleNewTransfer}
+          style={{
+            background: 'white',
+            color: '#0ea5e9',
+            border: '2px solid #0ea5e9',
+            borderRadius: '12px',
+            padding: '0.75rem 1.5rem',
+            fontWeight: '600',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = '#f0f9ff';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'white';
+            e.target.style.transform = 'translateY(0px)';
+          }}
+        >
+          Send Another
+        </button>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            background: '#0ea5e9',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '0.75rem 1.5rem',
+            fontWeight: '600',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = '#0284c7';
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 10px 25px rgba(14, 165, 233, 0.3)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = '#0ea5e9';
+            e.target.style.transform = 'translateY(0px)';
+            e.target.style.boxShadow = 'none';
+          }}
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+      padding: '2rem 1rem',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+    }}>
+      <div style={{
+        maxWidth: '600px',
+        margin: '0 auto'
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: '2rem'
+        }}>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{
+              background: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              width: '48px',
+              height: '48px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              marginRight: '1rem',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+            onMouseOut={(e) => e.target.style.background = 'white'}
+          >
+            ←
+          </button>
+          <h1 style={{
+            fontSize: '1.75rem',
+            fontWeight: '700',
+            color: '#171717',
+            margin: '0'
+          }}>
+            Send Money
+          </h1>
+        </div>
+
+        {/* Main Card */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          animation: 'fadeIn 0.5s ease-out'
+        }}>
+          {renderStepIndicator()}
+
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+
+          {/* Action Buttons */}
+          {currentStep < 3 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '2rem',
+              gap: '1rem'
+            }}>
+              {currentStep > 1 && (
+                <button
+                  onClick={handleBack}
+                  disabled={loading}
+                  style={{
+                    flex: '1',
+                    background: 'white',
+                    color: '#737373',
+                    border: '2px solid #e5e5e5',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1.5rem',
+                    fontWeight: '600',
+                    fontSize: '1rem',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.5 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading) {
+                      e.target.style.background = '#f8fafc';
+                      e.target.style.borderColor = '#d4d4d4';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading) {
+                      e.target.style.background = 'white';
+                      e.target.style.borderColor = '#e5e5e5';
+                    }
+                  }}
+                >
+                  Back
+                </button>
+              )}
+              
+              <button
+                onClick={currentStep === 1 ? handleNext : processTransfer}
+                disabled={loading}
+                style={{
+                  flex: '2',
+                  background: '#0ea5e9',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1.5rem',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.7 : 1,
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseOver={(e) => {
+                  if (!loading) {
+                    e.target.style.background = '#0284c7';
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 10px 25px rgba(14, 165, 233, 0.3)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!loading) {
+                    e.target.style.background = '#0ea5e9';
+                    e.target.style.transform = 'translateY(0px)';
+                    e.target.style.boxShadow = 'none';
+                  }
+                }}
+              >
+                {loading ? (
+                  <>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid transparent',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    Processing...
+                  </>
+                ) : (
+                  currentStep === 1 ? 'Continue' : 'Send Money'
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes zoomIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 640px) {
+          [style*="gridTemplateColumns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 
