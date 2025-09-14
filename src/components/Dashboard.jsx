@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const navigate = useNavigate(); // Real navigation hook
+  const { currentUser, logout } = useAuth(); // Real auth context
+  
   const [balance, setBalance] = useState(2500.00);
   const [showBalance, setShowBalance] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [currentUser] = useState({
-    first_name: 'John',
-    last_name: 'Doe',
-    email: 'testuser@example.com'
-  });
   
   const [recentTransactions] = useState([
     {
@@ -51,14 +51,23 @@ const Dashboard = () => {
     }).format(Math.abs(amount));
   };
 
+  // REAL NAVIGATION FUNCTIONS
   const handleSendMoney = () => {
-    // In your actual app, this would use navigate('/transfer')
-    alert('Navigate to Send Money page');
+    navigate('/transfer');
   };
 
   const handleViewTransactions = () => {
-    // In your actual app, this would use navigate('/transactions')  
-    alert('Navigate to Transactions page');
+    navigate('/transactions');
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleSettings = () => {
+    // Add settings page when you create it
+    navigate('/profile');
   };
 
   if (loading) {
@@ -108,7 +117,7 @@ const Dashboard = () => {
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        {/* Header */}
+        {/* Header with Navigation */}
         <div style={{
           marginBottom: '2rem',
           animation: 'fadeIn 0.6s ease-out'
@@ -134,7 +143,7 @@ const Dashboard = () => {
                 fontSize: '1.5rem',
                 fontWeight: '600'
               }}>
-                {currentUser?.first_name?.[0] || 'U'}
+                {currentUser?.first_name?.[0] || currentUser?.username?.[0] || 'U'}
               </div>
               <div>
                 <h1 style={{
@@ -143,7 +152,7 @@ const Dashboard = () => {
                   color: '#171717',
                   margin: '0 0 0.25rem 0'
                 }}>
-                  Welcome back, {currentUser?.first_name || 'User'}!
+                  Welcome back, {currentUser?.first_name || currentUser?.username || 'User'}!
                 </h1>
                 <p style={{
                   color: '#737373',
@@ -161,39 +170,47 @@ const Dashboard = () => {
             </div>
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'white',
-                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-              onMouseOut={(e) => e.target.style.background = 'white'}>
-                🔔
-              </button>
-              <button style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'white',
-                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-              onMouseOut={(e) => e.target.style.background = 'white'}>
+              <button 
+                onClick={handleSettings}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'white',
+                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+                onMouseOut={(e) => e.target.style.background = 'white'}
+              >
                 ⚙️
+              </button>
+              <button 
+                onClick={handleLogout}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'white',
+                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  color: '#ef4444'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#fef2f2'}
+                onMouseOut={(e) => e.target.style.background = 'white'}
+                title="Logout"
+              >
+                🚪
               </button>
             </div>
           </div>
@@ -494,6 +511,7 @@ const Dashboard = () => {
             {recentTransactions.map((transaction, index) => (
               <div
                 key={transaction.id}
+                onClick={handleViewTransactions}
                 style={{
                   padding: '1.5rem',
                   border: '1px solid #e5e5e5',
