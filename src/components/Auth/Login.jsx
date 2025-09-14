@@ -53,8 +53,55 @@ const Login = () => {
     if (error) setError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // In your Login.jsx, update the handleSubmit function:
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+
+  try {
+    console.log('Attempting login for:', email);
+    
+    const response = await authAPI.login(email, password);
+    console.log('Login response:', response);
+    console.log('Full response structure:', JSON.stringify(response.data, null, 2));
+    
+    if (response.data.token && response.data.user) {
+      const { token, user } = response.data;
+      
+      console.log('Extracted token:', token);
+      console.log('Extracted user:', user);
+      
+      // Manual storage for debugging
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      console.log('Stored in localStorage - Token:', localStorage.getItem('authToken'));
+      console.log('Stored in localStorage - User:', localStorage.getItem('user'));
+      
+      // Call AuthContext login
+      const loginSuccess = login(user, token);
+      console.log('AuthContext login called');
+      
+      if (loginSuccess) {
+        console.log('Login successful, redirecting to dashboard...');
+        // Don't check currentUser immediately - just navigate
+        navigate('/dashboard');
+      } else {
+        setError('Failed to establish session. Please try again.');
+      }
+    } else {
+      console.log('Login not successful:', response.data);
+      setError(response.data.error || 'Login failed');
+    }
+  } catch (error) {
+    console.log('Login error:', error);
+    console.log('Error response:', error.response?.data);
+    setError(error.response?.data?.error || 'Login failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
     
     // Basic validation
     if (!formData.email || !formData.password) {
