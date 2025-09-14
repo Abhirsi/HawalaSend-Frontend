@@ -79,23 +79,24 @@ const Login = () => {
         console.log('Extracted token:', token);
         console.log('Extracted user:', user);
         
-        // Manual storage for debugging
+        // CRITICAL: Store token and user in localStorage BEFORE calling AuthContext
         localStorage.setItem('authToken', token);
         localStorage.setItem('user', JSON.stringify(user));
         
         console.log('Stored in localStorage - Token:', localStorage.getItem('authToken'));
         console.log('Stored in localStorage - User:', localStorage.getItem('user'));
         
-        // Use the login function from AuthContext
-        const loginSuccess = login(user, token);
-        
-        console.log('AuthContext login called');
-        
-        // FIXED: Don't check currentUser immediately, just navigate on successful login
-        if (loginSuccess !== false) {
-          console.log('Login successful, redirecting to dashboard...');
+        // FIXED: Call login and wait for it to complete
+        try {
+          await login(user, token);
+          console.log('AuthContext login completed successfully');
+          
+          // Navigate to dashboard after successful login
+          console.log('Navigating to dashboard...');
           navigate('/dashboard');
-        } else {
+          
+        } catch (loginError) {
+          console.error('AuthContext login failed:', loginError);
           setError('Failed to establish session. Please try again.');
         }
         
