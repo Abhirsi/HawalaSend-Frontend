@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://hawalasend-backend-production.up.railway.app'
-  : 'http://localhost:5000';
+  : 'https://hawalasend-backend-production.up.railway.app'; // Use Railway for both
 
 const api = axios.create({
   baseURL: API_BASE_URL,
