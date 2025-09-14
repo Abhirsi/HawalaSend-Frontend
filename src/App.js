@@ -10,7 +10,7 @@ import Dashboard from './components/Dashboard';
 import Transfer from './pages/Transfer';
 import Transactions from './pages/Transactions';
 import ForgotPassword from './pages/ForgotPassword';
-import UserProfile from './pages/ProfilePage';
+import UserProfile from './pages/UserProfile';
 const theme = createTheme({
   palette: {
     primary: {
