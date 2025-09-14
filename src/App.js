@@ -10,6 +10,7 @@ import Dashboard from './components/Dashboard';
 import Transfer from './pages/Transfer';
 import Transactions from './pages/Transactions';
 import ForgotPassword from './pages/ForgotPassword';
+import UserProfile from './pages/ProfilePage';
 const theme = createTheme({
   palette: {
     primary: {
@@ -110,16 +111,11 @@ function App() {
             } 
           />
 
-          <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            } 
-          />
+         
           
           {/* Default redirect */}
+
+          <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
           {/* Catch all route */}
