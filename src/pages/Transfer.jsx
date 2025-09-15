@@ -1,51 +1,36 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { transferAPI } from "../api";
 
 // ✅ Floating Support Button
 const SupportButton = () => (
   <a
     href="/support"
-    style={{
-      position: "fixed",
-      bottom: "20px",
-      right: "20px",
-      background: "linear-gradient(135deg, #1976d2, #2e7d32)",
-      color: "white",
-      borderRadius: "50%",
-      width: "56px",
-      height: "56px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "1.5rem",
-      textDecoration: "none",
-      boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-      zIndex: 1000,
-    }}
+    className="fixed bottom-5 right-5 w-14 h-14 flex items-center justify-center rounded-full text-white text-xl shadow-lg z-50"
+    style={{ background: "linear-gradient(135deg, #1976d2, #2e7d32)" }}
     title="Chat with Support"
   >
     💬
   </a>
 );
 
-const Transfer = () => {
+export default function Transfer() {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
   const [balance, setBalance] = useState(2500.0);
 
   const [transferData, setTransferData] = useState({
-    recipientEmail: "",
     amount: "",
+    recipientName: "",
+    recipientEmail: "",
     description: "",
-    pin: "",
     paymentMethod: "interac",
     cardNumber: "",
     expiry: "",
     cvv: "",
+    pin: "",
   });
 
   const [validationErrors, setValidationErrors] = useState({});
@@ -55,10 +40,6 @@ const Transfer = () => {
   const exchangeRate = 110.45;
   const feePercentage = 0.01;
   const fixedFee = 4.99;
-
-  useEffect(() => {
-    if (!currentUser) navigate("/login");
-  }, [currentUser, navigate]);
 
   const formatCurrency = (amount, currency = "CAD") =>
     new Intl.NumberFormat("en-CA", {
@@ -85,6 +66,7 @@ const Transfer = () => {
     return (amt + calculateFee()).toFixed(2);
   };
 
+  // Handle input
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (validationErrors[name])
@@ -99,20 +81,33 @@ const Transfer = () => {
         ...p,
         [name]: value.replace(/[^0-9]/g, "").slice(0, 6),
       }));
+    } else if (name === "cardNumber") {
+      setTransferData((p) => ({
+        ...p,
+        [name]: value.replace(/[^0-9]/g, "").slice(0, 16),
+      }));
+    } else if (name === "cvv") {
+      setTransferData((p) => ({
+        ...p,
+        [name]: value.replace(/[^0-9]/g, "").slice(0, 4),
+      }));
     } else {
       setTransferData((p) => ({ ...p, [name]: value }));
     }
   };
 
+  // Validation
   const validateStep = (step) => {
     const errors = {};
     if (step >= 1) {
-      if (!transferData.recipientEmail)
-        errors.recipientEmail = "Recipient email required";
       if (!transferData.amount || parseFloat(transferData.amount) <= 0)
         errors.amount = "Enter valid amount";
       if (parseFloat(transferData.amount) > balance)
         errors.amount = "Insufficient balance";
+      if (!transferData.recipientName)
+        errors.recipientName = "Recipient name required";
+      if (!transferData.recipientEmail)
+        errors.recipientEmail = "Recipient email required";
     }
     if (step >= 2 && transferData.paymentMethod === "card") {
       if (!transferData.cardNumber || transferData.cardNumber.length < 16)
@@ -129,12 +124,13 @@ const Transfer = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Navigation
   const handleNext = () => {
-    if (validateStep(currentStep)) setCurrentStep((s) => s + 1);
+    if (validateStep(step)) setStep((s) => s + 1);
   };
 
   const handleBack = () => {
-    setCurrentStep((s) => s - 1);
+    setStep((s) => s - 1);
     setValidationErrors({});
   };
 
@@ -142,174 +138,251 @@ const Transfer = () => {
     if (!validateStep(3)) return;
     setLoading(true);
     try {
-      const response = await transferAPI.send({
-        recipient_email: transferData.recipientEmail,
-        amount: parseFloat(transferData.amount),
-        description: transferData.description || "Money transfer",
-        pin: transferData.pin,
-        method: transferData.paymentMethod,
-      });
-      setTransferResult({
-        success: true,
-        transaction: response.data.transaction,
-        newBalance: response.data.newBalance,
-      });
-      setBalance(response.data.newBalance);
-      setCurrentStep(4);
+      // Fake API simulation
+      setTimeout(() => {
+        setTransferResult({
+          success: true,
+          transaction: {
+            id: Date.now(),
+            amount: transferData.amount,
+            recipient: transferData.recipientEmail,
+          },
+          newBalance: balance - parseFloat(transferData.amount || 0),
+        });
+        setBalance(
+          balance - parseFloat(transferData.amount || 0) - calculateFee()
+        );
+        setStep(4);
+        setLoading(false);
+      }, 1500);
     } catch (err) {
-      setValidationErrors({
-        general: err.response?.data?.error || "Transfer failed",
-      });
-    } finally {
+      setValidationErrors({ general: "Transfer failed. Try again." });
       setLoading(false);
     }
   };
 
-  // --- Render Steps ---
+  // --- Steps ---
   const Step1_Details = () => (
     <div>
-      <h2>Send Money</h2>
-      <input
-        type="text"
-        name="amount"
-        placeholder="Amount CAD"
-        value={transferData.amount}
-        onChange={handleInputChange}
-      />
-      {validationErrors.amount && <p>{validationErrors.amount}</p>}
-      <p>They Receive: {formatKES(calculateReceiveAmount())}</p>
-      <p>Fee: {formatCurrency(calculateFee())}</p>
-      <input
-        type="email"
-        name="recipientEmail"
-        placeholder="Recipient Email"
-        value={transferData.recipientEmail}
-        onChange={handleInputChange}
-      />
-      {validationErrors.recipientEmail && <p>{validationErrors.recipientEmail}</p>}
-      <textarea
-        name="description"
-        placeholder="Description (optional)"
-        value={transferData.description}
-        onChange={handleInputChange}
-      />
+      <h2 className="text-lg font-semibold mb-4">Step 1: Transfer Details</h2>
+      <div className="space-y-3">
+        <input
+          type="text"
+          name="amount"
+          placeholder="Amount (CAD)"
+          value={transferData.amount}
+          onChange={handleInputChange}
+          className="w-full border rounded-md p-2"
+        />
+        {validationErrors.amount && (
+          <p className="text-xs text-red-500">{validationErrors.amount}</p>
+        )}
+        <p className="text-sm text-gray-600">
+          They Receive: <strong>{formatKES(calculateReceiveAmount())}</strong>
+        </p>
+        <p className="text-sm text-gray-600">
+          Fee: <strong>{formatCurrency(calculateFee())}</strong>
+        </p>
+        <input
+          type="text"
+          name="recipientName"
+          placeholder="Recipient Name"
+          value={transferData.recipientName}
+          onChange={handleInputChange}
+          className="w-full border rounded-md p-2"
+        />
+        {validationErrors.recipientName && (
+          <p className="text-xs text-red-500">
+            {validationErrors.recipientName}
+          </p>
+        )}
+        <input
+          type="email"
+          name="recipientEmail"
+          placeholder="Recipient Email"
+          value={transferData.recipientEmail}
+          onChange={handleInputChange}
+          className="w-full border rounded-md p-2"
+        />
+        {validationErrors.recipientEmail && (
+          <p className="text-xs text-red-500">
+            {validationErrors.recipientEmail}
+          </p>
+        )}
+        <textarea
+          name="description"
+          placeholder="Description (optional)"
+          value={transferData.description}
+          onChange={handleInputChange}
+          className="w-full border rounded-md p-2"
+        />
+      </div>
     </div>
   );
 
   const Step2_Payment = () => (
     <div>
-      <h2>Select Payment</h2>
-      <label>
-        <input
-          type="radio"
-          name="paymentMethod"
-          value="interac"
-          checked={transferData.paymentMethod === "interac"}
-          onChange={handleInputChange}
-        />
-        Interac e-Transfer
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="paymentMethod"
-          value="card"
-          checked={transferData.paymentMethod === "card"}
-          onChange={handleInputChange}
-        />
-        Credit/Debit Card
-      </label>
+      <h2 className="text-lg font-semibold mb-4">Step 2: Payment Method</h2>
+      <div className="space-y-2">
+        <label className="flex items-center space-x-2">
+          <input
+            type="radio"
+            name="paymentMethod"
+            value="interac"
+            checked={transferData.paymentMethod === "interac"}
+            onChange={handleInputChange}
+          />
+          <span>Interac e-Transfer</span>
+        </label>
+        <label className="flex items-center space-x-2">
+          <input
+            type="radio"
+            name="paymentMethod"
+            value="card"
+            checked={transferData.paymentMethod === "card"}
+            onChange={handleInputChange}
+          />
+          <span>Credit/Debit Card</span>
+        </label>
+      </div>
       {transferData.paymentMethod === "card" && (
-        <>
+        <div className="mt-4 space-y-3">
           <input
             type="text"
             name="cardNumber"
             placeholder="Card Number"
             value={transferData.cardNumber}
             onChange={handleInputChange}
+            className="w-full border rounded-md p-2"
+            maxLength={16}
           />
-          {validationErrors.cardNumber && <p>{validationErrors.cardNumber}</p>}
+          {validationErrors.cardNumber && (
+            <p className="text-xs text-red-500">{validationErrors.cardNumber}</p>
+          )}
           <input
             type="text"
             name="expiry"
             placeholder="MM/YY"
             value={transferData.expiry}
             onChange={handleInputChange}
+            className="w-full border rounded-md p-2"
+            maxLength={5}
           />
-          {validationErrors.expiry && <p>{validationErrors.expiry}</p>}
+          {validationErrors.expiry && (
+            <p className="text-xs text-red-500">{validationErrors.expiry}</p>
+          )}
           <input
             type="text"
             name="cvv"
             placeholder="CVV"
             value={transferData.cvv}
             onChange={handleInputChange}
+            className="w-full border rounded-md p-2"
+            maxLength={4}
           />
-          {validationErrors.cvv && <p>{validationErrors.cvv}</p>}
-        </>
+          {validationErrors.cvv && (
+            <p className="text-xs text-red-500">{validationErrors.cvv}</p>
+          )}
+        </div>
       )}
     </div>
   );
 
   const Step3_Confirm = () => (
     <div>
-      <h2>Confirm</h2>
-      <p>To: {transferData.recipientEmail}</p>
-      <p>Amount: {formatCurrency(transferData.amount)}</p>
-      <p>They Receive: {formatKES(calculateReceiveAmount())}</p>
-      <p>Total: {formatCurrency(calculateTotal())}</p>
+      <h2 className="text-lg font-semibold mb-4">Step 3: Confirm Transfer</h2>
+      <div className="mb-4 p-3 border rounded-lg bg-gray-50">
+        <p>
+          <strong>To:</strong> {transferData.recipientName} (
+          {transferData.recipientEmail})
+        </p>
+        <p>
+          <strong>Amount:</strong> {formatCurrency(transferData.amount)}
+        </p>
+        <p>
+          <strong>They Receive:</strong>{" "}
+          {formatKES(calculateReceiveAmount())}
+        </p>
+        <p>
+          <strong>Total:</strong> {formatCurrency(calculateTotal())}
+        </p>
+      </div>
       <input
         type="password"
         name="pin"
-        placeholder="Enter PIN"
+        placeholder="Enter 4-6 digit PIN"
         value={transferData.pin}
         onChange={handleInputChange}
+        className="w-full border rounded-md p-2"
+        maxLength={6}
       />
-      {validationErrors.pin && <p>{validationErrors.pin}</p>}
-      {validationErrors.general && <p>{validationErrors.general}</p>}
+      {validationErrors.pin && (
+        <p className="text-xs text-red-500">{validationErrors.pin}</p>
+      )}
+      {validationErrors.general && (
+        <p className="text-xs text-red-500">{validationErrors.general}</p>
+      )}
+      <p className="text-xs text-gray-500 mt-2">
+        For demo purposes, use PIN: 1234
+      </p>
     </div>
   );
 
   const Step4_Success = () => (
-    <div>
-      <h2>✅ Transfer Successful!</h2>
+    <div className="text-center">
+      <h2 className="text-lg font-semibold mb-4">✅ Transfer Successful!</h2>
       <p>
-        Sent {formatCurrency(transferData.amount)} to{" "}
+        You sent {formatCurrency(transferData.amount)} to{" "}
         {transferData.recipientEmail}
       </p>
-      <p>New Balance: {formatCurrency(transferResult?.newBalance || balance)}</p>
-      <button onClick={() => navigate("/dashboard")}>Back to Dashboard</button>
+      <p className="mt-2">
+        New Balance: {formatCurrency(transferResult?.newBalance || balance)}
+      </p>
+      <Button className="mt-4" onClick={() => navigate("/dashboard")}>
+        Back to Dashboard
+      </Button>
     </div>
   );
 
   return (
-    <div style={{ padding: "1rem", maxWidth: "600px", margin: "auto" }}>
-      {currentStep === 1 && <Step1_Details />}
-      {currentStep === 2 && <Step2_Payment />}
-      {currentStep === 3 && <Step3_Confirm />}
-      {currentStep === 4 && <Step4_Success />}
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardContent className="p-6">
+          {step === 1 && <Step1_Details />}
+          {step === 2 && <Step2_Payment />}
+          {step === 3 && <Step3_Confirm />}
+          {step === 4 && <Step4_Success />}
 
-      <div style={{ marginTop: "1rem" }}>
-        {currentStep > 1 && currentStep < 4 && (
-          <button onClick={handleBack}>Back</button>
-        )}
-        {currentStep < 3 && (
-          <button onClick={handleNext}>Next</button>
-        )}
-        {currentStep === 3 && (
-          <button onClick={processTransfer} disabled={loading}>
-            {loading ? "Processing..." : "Confirm & Send"}
-          </button>
-        )}
-      </div>
+          {/* Navigation */}
+          <div className="mt-6 flex justify-between">
+            {step > 1 && step < 4 && (
+              <Button variant="outline" onClick={handleBack}>
+                Back
+              </Button>
+            )}
+            {step < 3 && (
+              <Button className="ml-auto" onClick={handleNext}>
+                Next
+              </Button>
+            )}
+            {step === 3 && (
+              <Button
+                className="ml-auto"
+                onClick={processTransfer}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Confirm & Send"}
+              </Button>
+            )}
+          </div>
 
-      {/* ✅ Security Badges */}
-      <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.8rem", color: "#555" }}>
-        🔒 Secure | ✅ PCI Compliant | 🌍 Trusted Transfers
-      </div>
-
+          {/* ✅ Security Badges */}
+          <div className="mt-6 text-center text-xs text-gray-500">
+            🔒 Secure | ✅ PCI Compliant | 🌍 Trusted Transfers
+          </div>
+        </CardContent>
+      </Card>
       <SupportButton />
     </div>
   );
-};
-
-export default Transfer;
+}
