@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+// frontend/src/context/AuthContext.js - Fixed version
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
@@ -10,314 +11,260 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [tokenExpiry, setTokenExpiry] = useState(null);
-
-  // Safe storage helper with enhanced error handling
-  const safeStorage = {
-    getItem: (key) => {
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          return localStorage.getItem(key);
-        }
-        return null;
-      } catch (error) {
-        console.error(`Error reading ${key} from localStorage:`, error);
-        return null;
-      }
-    },
-    setItem: (key, value) => {
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem(key, value);
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.error(`Error writing ${key} to localStorage:`, error);
-        return false;
-      }
-    },
-    removeItem: (key) => {
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.removeItem(key);
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.error(`Error removing ${key} from localStorage:`, error);
-        return false;
-      }
-    }
-  };
-
-  // Decode JWT token to get expiry
-  const decodeToken = (token) => {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(jsonPayload);
-    } catch (error) {
-      console.error('Error decoding token:', error);
+// Helper function to safely decode JWT token
+const decodeToken = (token) => {
+  try {
+    if (!token || typeof token !== 'string') {
+      console.log('Invalid token type:', typeof token);
       return null;
     }
-  };
+    
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.log('Invalid token format - not 3 parts');
+      return null;
+    }
+    
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
 
-  // Check if token is expired
-  const isTokenExpired = useCallback((token) => {
-    if (!token) return true;
-    
+// Helper function to check if token is expired
+const isTokenExpired = (token) => {
+  try {
     const decoded = decodeToken(token);
-    if (!decoded || !decoded.exp) return true;
+    if (!decoded || !decoded.exp) {
+      return true;
+    }
     
-    const currentTime = Math.floor(Date.now() / 1000);
+    const currentTime = Date.now() / 1000;
     const isExpired = decoded.exp < currentTime;
     
     if (isExpired) {
-      console.log('AuthContext: Token expired at', new Date(decoded.exp * 1000));
+      const expiredDate = new Date(decoded.exp * 1000);
+      console.log('AuthContext: Token expired at', expiredDate);
     }
     
     return isExpired;
-  }, []);
+  } catch (error) {
+    console.error('Error checking token expiry:', error);
+    return true;
+  }
+};
+
+// Safe localStorage operations
+const safeStorage = {
+  getItem: (key) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      console.error('Error reading from localStorage:', error);
+      return null;
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      console.error('Error writing to localStorage:', error);
+      return false;
+    }
+  },
+  removeItem: (key) => {
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      console.error('Error removing from localStorage:', error);
+      return false;
+    }
+  }
+};
+
+export const AuthProvider = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Clear expired session
-  const clearExpiredSession = useCallback(() => {
-    console.log('AuthContext: Clearing expired session');
+  const clearSession = () => {
+    console.log('AuthContext: Clearing session');
+    setCurrentUser(null);
     safeStorage.removeItem('authToken');
     safeStorage.removeItem('user');
-    setCurrentUser(null);
-    setTokenExpiry(null);
-  }, []);
+  };
 
-  // Validate and restore session
-  const validateSession = useCallback(async () => {
-    console.log('AuthContext: Validating session');
-    
-    const token = safeStorage.getItem('authToken');
-    const userData = safeStorage.getItem('user');
-    
-    console.log('Token exists:', !!token);
-    console.log('User data exists:', !!userData);
-    
-    if (!token || !userData) {
-      console.log('AuthContext: No complete session found');
-      setLoading(false);
-      return;
-    }
-
-    // Check if token is expired
-    if (isTokenExpired(token)) {
-      console.log('AuthContext: Token expired, clearing session');
-      clearExpiredSession();
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const parsedUser = JSON.parse(userData);
-      const decoded = decodeToken(token);
-      
-      // Set token expiry for monitoring
-      if (decoded && decoded.exp) {
-        setTokenExpiry(decoded.exp * 1000);
-      }
-      
-      console.log('AuthContext: Restored valid user session', parsedUser);
-      setCurrentUser(parsedUser);
-    } catch (error) {
-      console.error('AuthContext: Error parsing user data', error);
-      clearExpiredSession();
-    } finally {
-      setLoading(false);
-    }
-  }, [isTokenExpired, clearExpiredSession]);
-
-  // Check for existing session on mount
+  // Validate and restore session on app load
   useEffect(() => {
-    validateSession();
-  }, [validateSession]);
-
-  // Token expiry monitor
-  useEffect(() => {
-    if (!tokenExpiry) return;
-
-    const checkTokenExpiry = () => {
-      const now = Date.now();
-      const timeUntilExpiry = tokenExpiry - now;
+    const validateSession = () => {
+      console.log('AuthContext: Validating session');
       
-      // If token expires in less than 5 minutes, warn user
-      if (timeUntilExpiry > 0 && timeUntilExpiry < 5 * 60 * 1000) {
-        console.warn('AuthContext: Token expires soon');
-        // You could show a renewal dialog here
-      }
-      
-      // If token is expired, clear session
-      if (timeUntilExpiry <= 0) {
-        console.log('AuthContext: Token expired, logging out');
-        logout();
+      try {
+        const token = safeStorage.getItem('authToken');
+        const userData = safeStorage.getItem('user');
+        
+        console.log('Token exists:', !!token);
+        console.log('User data exists:', !!userData);
+        
+        if (!token || !userData) {
+          console.log('AuthContext: No complete session found');
+          clearSession();
+          setLoading(false);
+          return;
+        }
+
+        // Check if token is expired
+        if (isTokenExpired(token)) {
+          console.log('AuthContext: Token expired, clearing session');
+          clearSession();
+          setLoading(false);
+          return;
+        }
+
+        // Parse user data
+        let user;
+        try {
+          user = JSON.parse(userData);
+        } catch (parseError) {
+          console.error('AuthContext: Error parsing user data:', parseError);
+          clearSession();
+          setLoading(false);
+          return;
+        }
+
+        // Validate user data structure
+        if (!user || !user.id || !user.email) {
+          console.log('AuthContext: Invalid user data structure');
+          clearSession();
+          setLoading(false);
+          return;
+        }
+
+        // Session is valid
+        console.log('AuthContext: Restored valid user session', user);
+        setCurrentUser(user);
+        
+      } catch (error) {
+        console.error('AuthContext: Session validation error:', error);
+        clearSession();
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Check every minute
-    const interval = setInterval(checkTokenExpiry, 60 * 1000);
-    
-    // Check immediately
-    checkTokenExpiry();
-
-    return () => clearInterval(interval);
-  }, [tokenExpiry]);
-
-  // Login function with enhanced validation
-  const login = useCallback((userData, token) => {
-    console.log('AuthContext: Logging in user', userData);
-    
-    if (!userData || !token) {
-      console.error('AuthContext: Invalid login data provided');
-      return false;
-    }
-
-    // Validate token before storing
-    if (isTokenExpired(token)) {
-      console.error('AuthContext: Attempting to login with expired token');
-      return false;
-    }
-
-    // Store both token and user data
-    const tokenStored = safeStorage.setItem('authToken', token);
-    const userStored = safeStorage.setItem('user', JSON.stringify(userData));
-
-    if (!tokenStored || !userStored) {
-      console.error('AuthContext: Failed to store auth data');
-      return false;
-    }
-
-    // Decode token to get expiry
-    const decoded = decodeToken(token);
-    if (decoded && decoded.exp) {
-      setTokenExpiry(decoded.exp * 1000);
-      console.log('AuthContext: Token expires at', new Date(decoded.exp * 1000));
-    }
-
-    setCurrentUser(userData);
-    console.log('AuthContext: Login successful');
-    return true;
-  }, [isTokenExpired]);
-
-  // Logout function with cleanup
-  const logout = useCallback(() => {
-    console.log('AuthContext: Logging out user');
-    
-    // Clear all auth data
-    safeStorage.removeItem('authToken');
-    safeStorage.removeItem('user');
-    
-    // Reset state
-    setCurrentUser(null);
-    setTokenExpiry(null);
-    
-    // Optional: Redirect to login page
-    // Note: Only redirect if we're not already on login page
-    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
-    }
+    validateSession();
   }, []);
 
-  // Update user data
-  const updateUser = useCallback((updatedUserData) => {
-    console.log('AuthContext: Updating user data', updatedUserData);
-    
-    if (!currentUser) {
-      console.error('AuthContext: Cannot update user - no current user');
-      return false;
-    }
-    
+  // Login function
+  const login = async (userData, token) => {
     try {
-      // Merge with existing user data
-      const newUserData = { ...currentUser, ...updatedUserData };
+      console.log('AuthContext: Logging in user', userData);
       
-      // Store updated data
-      const stored = safeStorage.setItem('user', JSON.stringify(newUserData));
-      
-      if (stored) {
-        setCurrentUser(newUserData);
-        console.log('AuthContext: User data updated successfully');
-        return true;
-      } else {
-        console.error('AuthContext: Failed to store updated user data');
+      // Validate inputs
+      if (!userData || !token) {
+        console.error('AuthContext: Missing userData or token');
         return false;
       }
+
+      if (typeof token !== 'string') {
+        console.error('AuthContext: Token is not a string:', typeof token);
+        return false;
+      }
+
+      // Validate token format
+      if (isTokenExpired(token)) {
+        console.error('AuthContext: Attempting to login with expired token');
+        return false;
+      }
+
+      // Store in localStorage
+      const tokenStored = safeStorage.setItem('authToken', token);
+      const userStored = safeStorage.setItem('user', JSON.stringify(userData));
+      
+      if (!tokenStored || !userStored) {
+        console.error('AuthContext: Failed to store session data');
+        return false;
+      }
+
+      // Update state
+      setCurrentUser(userData);
+      
+      // Log token expiry for debugging
+      const decoded = decodeToken(token);
+      if (decoded && decoded.exp) {
+        const expiryDate = new Date(decoded.exp * 1000);
+        console.log('AuthContext: Token expires at', expiryDate);
+      }
+      
+      console.log('AuthContext: Login successful');
+      return true;
+      
     } catch (error) {
-      console.error('AuthContext: Error updating user data', error);
+      console.error('AuthContext: Login error:', error);
       return false;
     }
-  }, [currentUser]);
+  };
 
-  // Refresh session (useful for API calls that return updated user data)
-  const refreshSession = useCallback(() => {
-    console.log('AuthContext: Refreshing session');
-    return validateSession();
-  }, [validateSession]);
+  // Logout function
+  const logout = () => {
+    console.log('AuthContext: Logging out user');
+    clearSession();
+  };
 
-  // Check if user has specific role or permission (extensible)
-  const hasRole = useCallback((role) => {
-    if (!currentUser) return false;
-    return currentUser.role === role || currentUser.roles?.includes(role);
-  }, [currentUser]);
-
-  // Get token for API calls
-  const getToken = useCallback(() => {
+  // Get current token
+  const getToken = () => {
     const token = safeStorage.getItem('authToken');
     if (!token || isTokenExpired(token)) {
-      console.warn('AuthContext: No valid token available');
+      clearSession();
       return null;
     }
     return token;
-  }, [isTokenExpired]);
+  };
 
-  // Enhanced authentication status
-  const isAuthenticated = !!(currentUser && getToken());
+  // Check if user has specific role (for future use)
+  const hasRole = (role) => {
+    return currentUser?.roles?.includes(role) || false;
+  };
 
-  // Session info for debugging
-  const getSessionInfo = useCallback(() => {
+  // Refresh session (for future use)
+  const refreshSession = async () => {
+    const token = getToken();
+    if (!token) {
+      return false;
+    }
+    
+    // Here you would typically call an API endpoint to refresh the token
+    // For now, just validate the current session
+    return !!currentUser;
+  };
+
+  // Get session info for debugging
+  const getSessionInfo = () => {
     const token = safeStorage.getItem('authToken');
-    const decoded = token ? decodeToken(token) : null;
+    const userData = safeStorage.getItem('user');
     
     return {
-      isAuthenticated,
-      currentUser,
-      tokenExpiry: tokenExpiry ? new Date(tokenExpiry) : null,
-      tokenValid: token ? !isTokenExpired(token) : false,
-      decodedToken: decoded
+      hasToken: !!token,
+      hasUser: !!userData,
+      isExpired: token ? isTokenExpired(token) : true,
+      currentUser: currentUser
     };
-  }, [isAuthenticated, currentUser, tokenExpiry, isTokenExpired]);
+  };
 
   const value = {
-    // State
     currentUser,
-    loading,
-    isAuthenticated,
-    
-    // Actions
     login,
     logout,
-    updateUser,
-    refreshSession,
-    
-    // Utilities
-    hasRole,
+    loading,
     getToken,
-    getSessionInfo,
-    
-    // Legacy support (if other components depend on these)
-    setCurrentUser: updateUser
+    hasRole,
+    refreshSession,
+    getSessionInfo
   };
 
   return (
@@ -326,5 +273,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export default AuthContext;
