@@ -11,6 +11,10 @@ import Transfer from './pages/Transfer';
 import Transactions from './pages/Transactions';
 import ForgotPassword from './pages/ForgotPassword';
 import UserProfile from './pages/UserProfile';
+import Contact from './pages/Contact';
+//import FloatingChat from '../components/common/FloatingChat';
+
+// Then include <FloatingChat /> at the bottom of your component
 const theme = createTheme({
   palette: {
     primary: {
@@ -110,8 +114,12 @@ function App() {
               </ProtectedRoute>
             } 
           />
-
-         
+          <Route path="/contact" element={
+            <ProtectedRoute>
+              <Contact />
+            </ProtectedRoute>
+          } />
+          
           
           {/* Default redirect */}
 
