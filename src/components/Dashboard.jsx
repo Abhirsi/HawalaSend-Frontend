@@ -1,57 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Button,
+  Box,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Chip,
+  Alert,
+  CircularProgress,
+  Divider
+} from '@mui/material';
+import {
+  AccountBalance as BalanceIcon,
+  Send as SendIcon,
+  Receipt as ReceiptIcon,
+  TrendingUp as TrendingUpIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon
+} from '@mui/icons-material';
 
 const Dashboard = () => {
-  const navigate = useNavigate(); // Real navigation hook
-  const { currentUser, logout } = useAuth(); // Real auth context
-  
-  const [balance, setBalance] = useState(2500.00);
-  const [showBalance, setShowBalance] = useState(true);
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
+  const [transactions, setTransactions] = useState([]);
+  const [balance, setBalance] = useState(2500.00); // This should come from backend too
   const [loading, setLoading] = useState(true);
-  
-  const [recentTransactions] = useState([
-    {
-      id: 1,
-      type: 'received',
-      amount: 150.00,
-      description: 'Payment from Sarah Wilson',
-      date: '2 hours ago',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      type: 'sent', 
-      amount: -75.50,
-      description: 'Transfer to Alice Smith',
-      date: '1 day ago',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      type: 'sent',
-      amount: -200.00,
-      description: 'Monthly rent payment',
-      date: '3 days ago',
-      status: 'completed'
-    }
-  ]);
+  const [error, setError] = useState('');
 
+  console.log('Dashboard mounted with user:', currentUser);
+
+  // Fetch real transactions from backend
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching transactions from /transactions');
+        
+        const response = await api.get('/transactions');
+        console.log('Transactions response:', response.data);
+        
+        if (response.data && Array.isArray(response.data.transactions)) {
+          setTransactions(response.data.transactions);
+          console.log(`Loaded ${response.data.transactions.length} real transactions`);
+        } else if (response.data && Array.isArray(response.data)) {
+          setTransactions(response.data);
+          console.log(`Loaded ${response.data.length} real transactions`);
+        } else {
+          console.log('No transactions found or invalid format');
+          setTransactions([]);
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        setError('Failed to load transactions. Using demo data.');
+        
+        // Fallback to empty array if API fails
+        setTransactions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(Math.abs(amount));
-  };
+    if (currentUser) {
+      fetchTransactions();
+    }
+  }, [currentUser]);
 
-  // REAL NAVIGATION FUNCTIONS
   const handleSendMoney = () => {
     navigate('/transfer');
   };
@@ -65,546 +88,216 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  const handleSettings = () => {
-    // Add settings page when you create it
-    navigate('/profile');
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
   };
 
-  if (loading) {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTransactionIcon = (transaction) => {
+    if (currentUser && transaction.sender_id === currentUser.id) {
+      return <ArrowUpwardIcon color="error" />;
+    } else {
+      return <ArrowDownwardIcon color="success" />;
+    }
+  };
+
+  const getTransactionType = (transaction) => {
+    if (currentUser && transaction.sender_id === currentUser.id) {
+      return 'Sent';
+    } else {
+      return 'Received';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'failed':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  if (!currentUser) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-        padding: '2rem'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'grid',
-          gap: '2rem'
-        }}>
-          <div style={{
-            height: '40px',
-            background: '#e5e5e5',
-            borderRadius: '8px',
-            animation: 'pulse 2s infinite'
-          }}></div>
-          <div style={{
-            height: '200px',
-            background: '#e5e5e5',
-            borderRadius: '16px',
-            animation: 'pulse 2s infinite'
-          }}></div>
-        </div>
-        <style jsx>{`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-          }
-        `}</style>
-      </div>
+      <Container>
+        <Alert severity="error">
+          Please log in to access your dashboard.
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-      padding: '2rem 1rem',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
-    }}>
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto'
-      }}>
-        {/* Header with Navigation */}
-        <div style={{
-          marginBottom: '2rem',
-          animation: 'fadeIn 0.6s ease-out'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '0.5rem',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                background: '#0ea5e9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '1.5rem',
-                fontWeight: '600'
-              }}>
-                {currentUser?.first_name?.[0] || currentUser?.username?.[0] || 'U'}
-              </div>
-              <div>
-                <h1 style={{
-                  fontSize: '2rem',
-                  fontWeight: '700',
-                  color: '#171717',
-                  margin: '0 0 0.25rem 0'
-                }}>
-                  Welcome back, {currentUser?.first_name || currentUser?.username || 'User'}!
-                </h1>
-                <p style={{
-                  color: '#737373',
-                  margin: '0',
-                  fontSize: '1rem'
-                }}>
-                  {new Date().toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </p>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button 
-                onClick={handleSettings}
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: 'white',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-                onMouseOut={(e) => e.target.style.background = 'white'}
-              >
-                ⚙️
-              </button>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: 'white',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease',
-                  color: '#ef4444'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#fef2f2'}
-                onMouseOut={(e) => e.target.style.background = 'white'}
-                title="Logout"
-              >
-                🚪
-              </button>
-            </div>
-          </div>
-        </div>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ flexGrow: 1 }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Welcome back, {currentUser.first_name}!
+          </Typography>
+          <Button variant="outlined" onClick={handleLogout}>
+            Logout
+          </Button>
+        </Box>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '2rem',
-          marginBottom: '2rem'
-        }}>
+        <Grid container spacing={3}>
           {/* Balance Card */}
-          <div style={{
-            gridColumn: window.innerWidth > 768 ? 'span 2' : 'span 1',
-            background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-            borderRadius: '16px',
-            padding: '2rem',
-            color: 'white',
-            position: 'relative',
-            overflow: 'hidden',
-            minHeight: '240px',
-            animation: 'zoomIn 0.8s ease-out',
-            boxShadow: '0 10px 40px rgba(14, 165, 233, 0.3)'
-          }}>
-            <div style={{
-              position: 'relative',
-              zIndex: '2'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '2rem'
-              }}>
-                <div>
-                  <p style={{
-                    opacity: '0.8',
-                    margin: '0 0 0.5rem 0',
-                    fontSize: '0.875rem'
-                  }}>
-                    Current Balance
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h2 style={{
-                      fontSize: '2.5rem',
-                      fontWeight: '700',
-                      margin: '0'
-                    }}>
-                      {showBalance ? formatCurrency(balance) : '••••••'}
-                    </h2>
-                    <button
-                      onClick={() => setShowBalance(!showBalance)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '1.2rem',
-                        padding: '0.25rem'
-                      }}
-                    >
-                      {showBalance ? '👁️' : '🙈'}
-                    </button>
-                  </div>
-                </div>
-                <div style={{ fontSize: '3rem', opacity: '0.2' }}>💰</div>
-              </div>
-              
-              <div style={{ marginBottom: '2rem' }}>
-                <p style={{
-                  opacity: '0.8',
-                  margin: '0 0 0.5rem 0',
-                  fontSize: '0.875rem'
-                }}>
-                  Monthly Activity
-                </p>
-                <div style={{
-                  height: '8px',
-                  background: 'rgba(255,255,255,0.2)',
-                  borderRadius: '4px',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: '65%',
-                    background: '#22c55e',
-                    borderRadius: '4px',
-                    transition: 'width 1s ease-out'
-                  }}></div>
-                </div>
-                <p style={{
-                  opacity: '0.8',
-                  margin: '0.5rem 0 0 0',
-                  fontSize: '0.75rem'
-                }}>
-                  $3,250 of $5,000 monthly limit
-                </p>
-              </div>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ height: '100%', bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <BalanceIcon sx={{ mr: 1 }} />
+                  <Typography variant="h6">
+                    Account Balance
+                  </Typography>
+                </Box>
+                <Typography variant="h4">
+                  {formatCurrency(balance)}
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
+                  Available for transfer
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem'
-              }}>
-                <button
-                  onClick={handleSendMoney}
-                  style={{
-                    background: 'white',
-                    color: '#0ea5e9',
-                    border: 'none',
-                    borderRadius: '12px',
-                    padding: '1rem 1.5rem',
-                    fontWeight: '600',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.background = '#f8fafc';
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 10px 25px rgba(0,0,0,0.15)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.background = 'white';
-                    e.target.style.transform = 'translateY(0px)';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                >
-                  💸 Send Money
-                </button>
-                <button
-                  onClick={handleViewTransactions}
-                  style={{
-                    background: 'transparent',
-                    color: 'white',
-                    border: '2px solid white',
-                    borderRadius: '12px',
-                    padding: '1rem 1.5rem',
-                    fontWeight: '600',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.background = 'rgba(255,255,255,0.1)';
-                    e.target.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.background = 'transparent';
-                    e.target.style.transform = 'translateY(0px)';
-                  }}
-                >
-                  📋 Transactions
-                </button>
-              </div>
-            </div>
-            
-            {/* Background decoration */}
-            <div style={{
-              position: 'absolute',
-              top: '-50px',
-              right: '-50px',
-              width: '200px',
-              height: '200px',
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.05)',
-              zIndex: '1'
-            }}></div>
-          </div>
+          {/* Quick Actions */}
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Quick Actions
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Button
+                    variant="contained"
+                    startIcon={<SendIcon />}
+                    fullWidth
+                    size="large"
+                    onClick={handleSendMoney}
+                    sx={{ py: 2 }}
+                  >
+                    Transfer Funds
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<ReceiptIcon />}
+                    fullWidth
+                    size="large"
+                    onClick={handleViewTransactions}
+                    sx={{ py: 2 }}
+                  >
+                    View Transactions
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Grid>
 
-          {/* Quick Stats */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            animation: 'zoomIn 1s ease-out'
-          }}>
-            <div style={{
-              background: 'white',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              textAlign: 'center',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.transform = 'translateY(-4px)';
-              e.target.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.transform = 'translateY(0px)';
-              e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-            }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📈</div>
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#171717',
-                margin: '0 0 0.25rem 0'
-              }}>
-                +12.5%
-              </h3>
-              <p style={{
-                color: '#737373',
-                margin: '0',
-                fontSize: '0.875rem'
-              }}>
-                Monthly Growth
-              </p>
-            </div>
+          {/* Recent Transactions */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TrendingUpIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">
+                  Recent Transactions
+                </Typography>
+              </Box>
 
-            <div style={{
-              background: 'white',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              textAlign: 'center',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.transform = 'translateY(-4px)';
-              e.target.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.transform = 'translateY(0px)';
-              e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-            }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💸</div>
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#171717',
-                margin: '0 0 0.25rem 0'
-              }}>
-                24
-              </h3>
-              <p style={{
-                color: '#737373',
-                margin: '0',
-                fontSize: '0.875rem'
-              }}>
-                Transfers This Month
-              </p>
-            </div>
-          </div>
-        </div>
+              {error && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
 
-        {/* Recent Transactions */}
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '2rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          animation: 'fadeIn 1.2s ease-out'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '2rem'
-          }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: '#171717',
-              margin: '0'
-            }}>
-              Recent Activity
-            </h2>
-            <button
-              onClick={handleViewTransactions}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#0ea5e9',
-                fontWeight: '600',
-                cursor: 'pointer',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => e.target.style.background = '#f0f9ff'}
-              onMouseOut={(e) => e.target.style.background = 'none'}
-            >
-              View All →
-            </button>
-          </div>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : transactions.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No transactions found. Start by sending your first transfer!
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<SendIcon />}
+                    onClick={handleSendMoney}
+                    sx={{ mt: 2 }}
+                  >
+                    Send Your First Transfer
+                  </Button>
+                </Box>
+              ) : (
+                <List>
+                  {transactions.slice(0, 5).map((transaction, index) => (
+                    <React.Fragment key={transaction.id}>
+                      <ListItem>
+                        <ListItemIcon>
+                          {getTransactionIcon(transaction)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography variant="body1">
+                                {getTransactionType(transaction)} - {transaction.description || 'Money Transfer'}
+                              </Typography>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                {formatCurrency(transaction.amount)}
+                              </Typography>
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {formatDate(transaction.created_at)}
+                              </Typography>
+                              <Chip 
+                                label={transaction.status} 
+                                size="small" 
+                                color={getStatusColor(transaction.status)}
+                              />
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                      {index < Math.min(transactions.length - 1, 4) && <Divider />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {recentTransactions.map((transaction, index) => (
-              <div
-                key={transaction.id}
-                onClick={handleViewTransactions}
-                style={{
-                  padding: '1.5rem',
-                  border: '1px solid #e5e5e5',
-                  borderRadius: '12px',
-                  transition: 'all 0.2s ease',
-                  animation: `fadeIn ${1.4 + index * 0.2}s ease-out`,
-                  cursor: 'pointer'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  e.target.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.boxShadow = 'none';
-                  e.target.style.transform = 'translateY(0px)';
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem'
-                }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: transaction.type === 'received' ? '#f0fdf4' : '#fef2f2',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.25rem'
-                  }}>
-                    {transaction.type === 'received' ? '↓' : '↑'}
-                  </div>
-                  
-                  <div style={{ flex: '1' }}>
-                    <h4 style={{
-                      fontWeight: '600',
-                      color: '#171717',
-                      margin: '0 0 0.25rem 0',
-                      fontSize: '1rem'
-                    }}>
-                      {transaction.description}
-                    </h4>
-                    <p style={{
-                      color: '#737373',
-                      margin: '0',
-                      fontSize: '0.875rem'
-                    }}>
-                      {transaction.date} • {transaction.status}
-                    </p>
-                  </div>
-
-                  <div style={{ textAlign: 'right' }}>
-                    <h4 style={{
-                      fontWeight: '700',
-                      color: transaction.type === 'received' ? '#22c55e' : '#ef4444',
-                      margin: '0',
-                      fontSize: '1.25rem'
-                    }}>
-                      {transaction.type === 'received' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </h4>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes zoomIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-
-        @media (max-width: 768px) {
-          [style*="gridColumn: span 2"] {
-            grid-column: span 1 !important;
-          }
-        }
-      `}</style>
-    </div>
+              {transactions.length > 5 && (
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Button variant="text" onClick={handleViewTransactions}>
+                    View All Transactions
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+      </Box>
+    </Container>
   );
 };
 
