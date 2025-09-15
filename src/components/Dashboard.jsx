@@ -46,7 +46,7 @@ const Dashboard = () => {
         setLoading(true);
         console.log('Fetching transactions from /transactions');
         
-        const response = await api.get('/transactions');
+        const response = await transactionAPI.getAll();
         console.log('Transactions response:', response.data);
         
         if (response.data && Array.isArray(response.data.transactions)) {
@@ -269,7 +269,7 @@ const Dashboard = () => {
                           secondary={
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
                               <Typography variant="body2" color="text.secondary">
-                                {formatDate(transaction.created_at)}
+                                {transaction.otherParty ? `To/From: ${transaction.otherParty}` : ''} • {formatDate(transaction.createdAt)}
                               </Typography>
                               <Chip 
                                 label={transaction.status} 
