@@ -1,961 +1,313 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { transferAPI } from '../api';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { transferAPI } from "../api";
+
+// ✅ Floating Support Button
+const SupportButton = () => (
+  <a
+    href="/support"
+    style={{
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      background: "linear-gradient(135deg, #1976d2, #2e7d32)",
+      color: "white",
+      borderRadius: "50%",
+      width: "56px",
+      height: "56px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "1.5rem",
+      textDecoration: "none",
+      boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+      zIndex: 1000,
+    }}
+    title="Chat with Support"
+  >
+    💬
+  </a>
+);
 
 const Transfer = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [balance, setBalance] = useState(2500.00);
-  
+  const [balance, setBalance] = useState(2500.0);
+
   const [transferData, setTransferData] = useState({
-    recipientEmail: '',
-    amount: '',
-    description: '',
-    pin: ''
+    recipientEmail: "",
+    amount: "",
+    description: "",
+    pin: "",
+    paymentMethod: "interac",
+    cardNumber: "",
+    expiry: "",
+    cvv: "",
   });
-  
+
   const [validationErrors, setValidationErrors] = useState({});
   const [transferResult, setTransferResult] = useState(null);
 
-  // PaySii-inspired exchange rate and fee calculation
-  const exchangeRate = 110.45; // CAD to KES
-  const feePercentage = 0.01; // 1% fee
-  const fixedFee = 4.99; // Fixed fee like PaySii
+  // Exchange + fees
+  const exchangeRate = 110.45;
+  const feePercentage = 0.01;
+  const fixedFee = 4.99;
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-    }
+    if (!currentUser) navigate("/login");
   }, [currentUser, navigate]);
 
-  const formatCurrency = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
+  const formatCurrency = (amount, currency = "CAD") =>
+    new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency,
     }).format(amount);
-  };
 
-  // PaySii-inspired currency conversion
-  const formatKES = (amount) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
+  const formatKES = (amount) =>
+    new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
     }).format(amount);
-  };
 
-  const calculateReceiveAmount = () => {
-    const amount = parseFloat(transferData.amount) || 0;
-    return (amount * exchangeRate).toFixed(2);
-  };
+  const calculateReceiveAmount = () =>
+    ((parseFloat(transferData.amount) || 0) * exchangeRate).toFixed(2);
 
   const calculateFee = () => {
-    const amount = parseFloat(transferData.amount) || 0;
-    return Math.max(amount * feePercentage, fixedFee);
+    const amt = parseFloat(transferData.amount) || 0;
+    return Math.max(amt * feePercentage, fixedFee);
   };
 
   const calculateTotal = () => {
-    const amount = parseFloat(transferData.amount) || 0;
-    return (amount + calculateFee()).toFixed(2);
+    const amt = parseFloat(transferData.amount) || 0;
+    return (amt + calculateFee()).toFixed(2);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    // Clear validation error when user types
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({ ...prev, [name]: '' }));
-    }
-    
-    // Special handling for amount (numbers only with decimal)
-    if (name === 'amount') {
-      const numericValue = value.replace(/[^0-9.]/g, '');
-      if (numericValue.split('.').length <= 2) {
-        setTransferData(prev => ({ ...prev, [name]: numericValue }));
-      }
-    } else if (name === 'pin') {
-      // PIN: numbers only, max 6 digits
-      const numericValue = value.replace(/[^0-9]/g, '').slice(0, 6);
-      setTransferData(prev => ({ ...prev, [name]: numericValue }));
+    if (validationErrors[name])
+      setValidationErrors((prev) => ({ ...prev, [name]: "" }));
+
+    if (name === "amount") {
+      const numeric = value.replace(/[^0-9.]/g, "");
+      if (numeric.split(".").length <= 2)
+        setTransferData((p) => ({ ...p, [name]: numeric }));
+    } else if (name === "pin") {
+      setTransferData((p) => ({
+        ...p,
+        [name]: value.replace(/[^0-9]/g, "").slice(0, 6),
+      }));
     } else {
-      setTransferData(prev => ({ ...prev, [name]: value }));
+      setTransferData((p) => ({ ...p, [name]: value }));
     }
   };
 
   const validateStep = (step) => {
     const errors = {};
-    
     if (step >= 1) {
-      if (!transferData.recipientEmail) {
-        errors.recipientEmail = 'Recipient email is required';
-      } else if (!/\S+@\S+\.\S+/.test(transferData.recipientEmail)) {
-        errors.recipientEmail = 'Please enter a valid email address';
-      } else if (transferData.recipientEmail.toLowerCase() === currentUser?.email?.toLowerCase()) {
-        errors.recipientEmail = 'Cannot send money to yourself';
-      }
-      
-      if (!transferData.amount) {
-        errors.amount = 'Amount is required';
-      } else if (parseFloat(transferData.amount) <= 0) {
-        errors.amount = 'Amount must be greater than 0';
-      } else if (parseFloat(transferData.amount) > balance) {
-        errors.amount = 'Insufficient funds';
-      } else if (parseFloat(transferData.amount) > 10000) {
-        errors.amount = 'Maximum transfer amount is $10,000';
-      }
+      if (!transferData.recipientEmail)
+        errors.recipientEmail = "Recipient email required";
+      if (!transferData.amount || parseFloat(transferData.amount) <= 0)
+        errors.amount = "Enter valid amount";
+      if (parseFloat(transferData.amount) > balance)
+        errors.amount = "Insufficient balance";
     }
-    
-    if (step >= 2) {
-      if (!transferData.pin) {
-        errors.pin = 'PIN is required';
-      } else if (transferData.pin.length < 4) {
-        errors.pin = 'PIN must be at least 4 digits';
-      }
+    if (step >= 2 && transferData.paymentMethod === "card") {
+      if (!transferData.cardNumber || transferData.cardNumber.length < 16)
+        errors.cardNumber = "Valid card number required";
+      if (!transferData.expiry) errors.expiry = "Expiry required";
+      if (!transferData.cvv || transferData.cvv.length < 3)
+        errors.cvv = "CVV required";
     }
-    
+    if (step >= 3) {
+      if (!transferData.pin || transferData.pin.length < 4)
+        errors.pin = "PIN must be 4+ digits";
+    }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => prev + 1);
-    }
+    if (validateStep(currentStep)) setCurrentStep((s) => s + 1);
   };
 
   const handleBack = () => {
-    setCurrentStep(prev => prev - 1);
+    setCurrentStep((s) => s - 1);
     setValidationErrors({});
   };
 
   const processTransfer = async () => {
-    if (!validateStep(2)) return;
-    
+    if (!validateStep(3)) return;
     setLoading(true);
-    
     try {
       const response = await transferAPI.send({
         recipient_email: transferData.recipientEmail,
         amount: parseFloat(transferData.amount),
-        description: transferData.description || 'Money transfer',
-        pin: transferData.pin
+        description: transferData.description || "Money transfer",
+        pin: transferData.pin,
+        method: transferData.paymentMethod,
       });
-      
-      if (response.data.success) {
-        setTransferResult({
-          success: true,
-          transaction: response.data.transaction,
-          newBalance: response.data.newBalance
-        });
-        setBalance(response.data.newBalance);
-        setCurrentStep(3);
-      } else {
-        setValidationErrors({ general: response.data.error || 'Transfer failed' });
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Transfer failed. Please try again.';
-      setValidationErrors({ general: errorMessage });
+      setTransferResult({
+        success: true,
+        transaction: response.data.transaction,
+        newBalance: response.data.newBalance,
+      });
+      setBalance(response.data.newBalance);
+      setCurrentStep(4);
+    } catch (err) {
+      setValidationErrors({
+        general: err.response?.data?.error || "Transfer failed",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNewTransfer = () => {
-    setTransferData({
-      recipientEmail: '',
-      amount: '',
-      description: '',
-      pin: ''
-    });
-    setValidationErrors({});
-    setTransferResult(null);
-    setCurrentStep(1);
-  };
-
-  const renderStepIndicator = () => (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      marginBottom: '2rem',
-      gap: '1rem'
-    }}>
-      {[1, 2, 3].map(step => (
-        <div key={step} style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: currentStep >= step ? 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)' : '#e5e5e5',
-            color: currentStep >= step ? 'white' : '#737373',
-            fontWeight: '600',
-            fontSize: '0.875rem',
-            transition: 'all 0.2s ease'
-          }}>
-            {step}
-          </div>
-          <span style={{
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            color: currentStep >= step ? '#1976d2' : '#737373'
-          }}>
-            {step === 1 ? 'Details' : step === 2 ? 'Confirm' : 'Complete'}
-          </span>
-          {step < 3 && (
-            <div style={{
-              width: '2rem',
-              height: '2px',
-              background: currentStep > step ? 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)' : '#e5e5e5',
-              transition: 'all 0.2s ease'
-            }} />
-          )}
-        </div>
-      ))}
+  // --- Render Steps ---
+  const Step1_Details = () => (
+    <div>
+      <h2>Send Money</h2>
+      <input
+        type="text"
+        name="amount"
+        placeholder="Amount CAD"
+        value={transferData.amount}
+        onChange={handleInputChange}
+      />
+      {validationErrors.amount && <p>{validationErrors.amount}</p>}
+      <p>They Receive: {formatKES(calculateReceiveAmount())}</p>
+      <p>Fee: {formatCurrency(calculateFee())}</p>
+      <input
+        type="email"
+        name="recipientEmail"
+        placeholder="Recipient Email"
+        value={transferData.recipientEmail}
+        onChange={handleInputChange}
+      />
+      {validationErrors.recipientEmail && <p>{validationErrors.recipientEmail}</p>}
+      <textarea
+        name="description"
+        placeholder="Description (optional)"
+        value={transferData.description}
+        onChange={handleInputChange}
+      />
     </div>
   );
 
-  const renderStep1 = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <h2 style={{
-        fontSize: '1.5rem',
-        fontWeight: '700',
-        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-        backgroundClip: 'text',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        marginBottom: '1.5rem',
-        textAlign: 'center'
-      }}>
-        How much would you like to send?
-      </h2>
-      
-      {/* PaySii-inspired currency display */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '1rem', 
-        marginBottom: '2rem' 
-      }}>
-        {/* You Send - Canada */}
-        <div style={{
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-          border: '2px solid #1976d2',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          position: 'relative'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <img src="https://flagcdn.com/w40/ca.png" alt="Canada" width="24" height="18" />
-            <span style={{ fontWeight: '600', color: '#1976d2' }}>You Send (CAD)</span>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <span style={{
-              position: 'absolute',
-              left: '0',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#1976d2',
-              fontSize: '2rem',
-              fontWeight: '700'
-            }}>
-              $
-            </span>
-            <input
-              type="text"
-              name="amount"
-              value={transferData.amount}
-              onChange={handleInputChange}
-              placeholder="0.00"
-              style={{
-                width: '100%',
-                padding: '0.5rem 0 0.5rem 2rem',
-                border: 'none',
-                background: 'transparent',
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: '#1976d2',
-                outline: 'none',
-                textAlign: 'right'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* They Receive - Kenya */}
-        <div style={{
-          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-          border: '2px solid #2e7d32',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          position: 'relative'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <img src="https://flagcdn.com/w40/ke.png" alt="Kenya" width="24" height="18" />
-            <span style={{ fontWeight: '600', color: '#2e7d32' }}>They Receive (KES)</span>
-          </div>
-          <div style={{
-            fontSize: '2rem',
-            fontWeight: '700',
-            color: '#2e7d32',
-            textAlign: 'right'
-          }}>
-            {calculateReceiveAmount()}
-          </div>
-        </div>
-      </div>
-
-      {/* Exchange Rate Info - PaySii style */}
-      <div style={{
-        background: '#f8fafc',
-        border: '1px solid #e5e5e5',
-        borderRadius: '12px',
-        padding: '1rem',
-        marginBottom: '1.5rem',
-        textAlign: 'center'
-      }}>
-        <div style={{ color: '#737373', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-          Exchange Rate: 1 CAD = {exchangeRate} KES
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#737373' }}>
-          <span>Fee: {formatCurrency(calculateFee())}</span>
-          <span>Total: {formatCurrency(parseFloat(calculateTotal()))}</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Recipient Email
-          </label>
-          <input
-            type="email"
-            name="recipientEmail"
-            value={transferData.recipientEmail}
-            onChange={handleInputChange}
-            placeholder="Enter recipient's email address"
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: `2px solid ${validationErrors.recipientEmail ? '#ef4444' : '#e5e5e5'}`,
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              if (!validationErrors.recipientEmail) {
-                e.target.style.borderColor = '#1976d2';
-              }
-            }}
-            onBlur={(e) => {
-              if (!validationErrors.recipientEmail) {
-                e.target.style.borderColor = '#e5e5e5';
-              }
-            }}
-          />
-          {validationErrors.recipientEmail && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.recipientEmail}
-            </span>
-          )}
-        </div>
-
-        {validationErrors.amount && (
-          <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '-1rem', display: 'block' }}>
-            {validationErrors.amount}
-          </span>
-        )}
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '0.75rem',
-          color: '#737373'
-        }}>
-          <span>Available balance: {formatCurrency(balance)}</span>
-          <span>Max: $10,000</span>
-        </div>
-
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Description (Optional)
-          </label>
-          <textarea
-            name="description"
-            value={transferData.description}
-            onChange={handleInputChange}
-            placeholder="What's this transfer for?"
-            rows={3}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: '2px solid #e5e5e5',
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              resize: 'vertical',
-              boxSizing: 'border-box',
-              fontFamily: 'inherit'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e5e5'}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <h2 style={{
-        fontSize: '1.5rem',
-        fontWeight: '700',
-        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-        backgroundClip: 'text',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        marginBottom: '1.5rem',
-        textAlign: 'center'
-      }}>
-        Confirm Transfer
-      </h2>
-
-      {/* Enhanced Transfer Summary */}
-      <div style={{
-        background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)',
-        border: '1px solid #e5e5e5',
-        borderRadius: '16px',
-        padding: '1.5rem',
-        marginBottom: '1.5rem'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>To:</span>
-            <span style={{ fontWeight: '600', color: '#171717' }}>{transferData.recipientEmail}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>You Send:</span>
-            <span style={{ fontWeight: '700', color: '#1976d2', fontSize: '1.125rem' }}>
-              {formatCurrency(parseFloat(transferData.amount || 0))}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>They Receive:</span>
-            <span style={{ fontWeight: '700', color: '#2e7d32', fontSize: '1.125rem' }}>
-              {formatKES(parseFloat(calculateReceiveAmount()))}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>Fee:</span>
-            <span style={{ fontWeight: '600', color: '#737373' }}>
-              {formatCurrency(calculateFee())}
-            </span>
-          </div>
-          <div style={{ height: '1px', background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)', margin: '0.5rem 0' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#171717', fontWeight: '600' }}>Total:</span>
-            <span style={{ fontWeight: '700', color: '#171717', fontSize: '1.125rem' }}>
-              {formatCurrency(parseFloat(calculateTotal()))}
-            </span>
-          </div>
-          {transferData.description && (
-            <>
-              <div style={{ height: '1px', background: '#e5e5e5', margin: '0.5rem 0' }} />
-              <div>
-                <span style={{ color: '#737373', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>Description:</span>
-                <span style={{ color: '#171717' }}>{transferData.description}</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* PIN Input */}
-      <div>
-        <label style={{
-          display: 'block',
-          fontSize: '0.875rem',
-          fontWeight: '600',
-          color: '#374151',
-          marginBottom: '0.5rem'
-        }}>
-          Enter your PIN to confirm
-        </label>
+  const Step2_Payment = () => (
+    <div>
+      <h2>Select Payment</h2>
+      <label>
         <input
-          type="text"
-          name="pin"
-          value={transferData.pin}
+          type="radio"
+          name="paymentMethod"
+          value="interac"
+          checked={transferData.paymentMethod === "interac"}
           onChange={handleInputChange}
-          placeholder="Enter 4-6 digit PIN"
-          maxLength={6}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            border: `2px solid ${validationErrors.pin ? '#ef4444' : '#e5e5e5'}`,
-            borderRadius: '12px',
-            fontSize: '1rem',
-            textAlign: 'center',
-            letterSpacing: '0.25rem',
-            transition: 'all 0.2s ease',
-            outline: 'none',
-            boxSizing: 'border-box'
-          }}
-          onFocus={(e) => {
-            if (!validationErrors.pin) {
-              e.target.style.borderColor = '#1976d2';
-            }
-          }}
-          onBlur={(e) => {
-            if (!validationErrors.pin) {
-              e.target.style.borderColor = '#e5e5e5';
-            }
-          }}
         />
-        {validationErrors.pin && (
-          <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-            {validationErrors.pin}
-          </span>
-        )}
-        <p style={{
-          fontSize: '0.75rem',
-          color: '#737373',
-          marginTop: '0.5rem',
-          textAlign: 'center'
-        }}>
-          For demo purposes, use PIN: 1234
-        </p>
-      </div>
-
-      {validationErrors.general && (
-        <div style={{
-          background: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          padding: '1rem',
-          marginTop: '1rem'
-        }}>
-          <span style={{ color: '#dc2626', fontSize: '0.875rem' }}>
-            {validationErrors.general}
-          </span>
-        </div>
+        Interac e-Transfer
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="paymentMethod"
+          value="card"
+          checked={transferData.paymentMethod === "card"}
+          onChange={handleInputChange}
+        />
+        Credit/Debit Card
+      </label>
+      {transferData.paymentMethod === "card" && (
+        <>
+          <input
+            type="text"
+            name="cardNumber"
+            placeholder="Card Number"
+            value={transferData.cardNumber}
+            onChange={handleInputChange}
+          />
+          {validationErrors.cardNumber && <p>{validationErrors.cardNumber}</p>}
+          <input
+            type="text"
+            name="expiry"
+            placeholder="MM/YY"
+            value={transferData.expiry}
+            onChange={handleInputChange}
+          />
+          {validationErrors.expiry && <p>{validationErrors.expiry}</p>}
+          <input
+            type="text"
+            name="cvv"
+            placeholder="CVV"
+            value={transferData.cvv}
+            onChange={handleInputChange}
+          />
+          {validationErrors.cvv && <p>{validationErrors.cvv}</p>}
+        </>
       )}
     </div>
   );
 
-  const renderStep3 = () => (
-    <div style={{ 
-      animation: 'zoomIn 0.5s ease-out',
-      textAlign: 'center'
-    }}>
-      <div style={{
-        width: '80px',
-        height: '80px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        margin: '0 auto 1.5rem auto',
-        fontSize: '2.5rem'
-      }}>
-        ✅
-      </div>
+  const Step3_Confirm = () => (
+    <div>
+      <h2>Confirm</h2>
+      <p>To: {transferData.recipientEmail}</p>
+      <p>Amount: {formatCurrency(transferData.amount)}</p>
+      <p>They Receive: {formatKES(calculateReceiveAmount())}</p>
+      <p>Total: {formatCurrency(calculateTotal())}</p>
+      <input
+        type="password"
+        name="pin"
+        placeholder="Enter PIN"
+        value={transferData.pin}
+        onChange={handleInputChange}
+      />
+      {validationErrors.pin && <p>{validationErrors.pin}</p>}
+      {validationErrors.general && <p>{validationErrors.general}</p>}
+    </div>
+  );
 
-      <h2 style={{
-        fontSize: '1.5rem',
-        fontWeight: '700',
-        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-        backgroundClip: 'text',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        marginBottom: '0.5rem'
-      }}>
-        Transfer Successful!
-      </h2>
-
-      <p style={{
-        color: '#737373',
-        marginBottom: '2rem',
-        fontSize: '1rem'
-      }}>
-        Your money has been sent successfully
+  const Step4_Success = () => (
+    <div>
+      <h2>✅ Transfer Successful!</h2>
+      <p>
+        Sent {formatCurrency(transferData.amount)} to{" "}
+        {transferData.recipientEmail}
       </p>
-
-      <div style={{
-        background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)',
-        border: '1px solid #e5e5e5',
-        borderRadius: '16px',
-        padding: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>Amount Sent:</span>
-            <span style={{ fontWeight: '700', color: '#1976d2', fontSize: '1.125rem' }}>
-              {formatCurrency(parseFloat(transferData.amount || 0))}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>They Received:</span>
-            <span style={{ fontWeight: '700', color: '#2e7d32', fontSize: '1.125rem' }}>
-              {formatKES(parseFloat(calculateReceiveAmount()))}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>To:</span>
-            <span style={{ fontWeight: '600', color: '#171717' }}>{transferData.recipientEmail}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>New Balance:</span>
-            <span style={{ fontWeight: '600', color: '#171717' }}>
-              {formatCurrency(transferResult?.newBalance || balance)}
-            </span>
-          </div>
-          {transferResult?.transaction?.id && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Transaction ID:</span>
-              <span style={{ fontWeight: '600', color: '#171717', fontSize: '0.875rem' }}>
-                #{transferResult.transaction.id}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '1rem'
-      }}>
-        <button
-          onClick={handleNewTransfer}
-          style={{
-            background: 'white',
-            color: '#1976d2',
-            border: '2px solid #1976d2',
-            borderRadius: '12px',
-            padding: '0.75rem 1.5rem',
-            fontWeight: '600',
-            fontSize: '1rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.background = '#f0f9ff';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'white';
-            e.target.style.transform = 'translateY(0px)';
-          }}
-        >
-          Send Another
-        </button>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{
-            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '0.75rem 1.5rem',
-            fontWeight: '600',
-            fontSize: '1rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.background = 'linear-gradient(135deg, #1565c0 0%, #1b5e20 100%)';
-            e.target.style.transform = 'translateY(-2px)';
-            e.target.style.boxShadow = '0 10px 25px rgba(25, 118, 210, 0.3)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)';
-            e.target.style.transform = 'translateY(0px)';
-            e.target.style.boxShadow = 'none';
-          }}
-        >
-          Back to Dashboard
-        </button>
-      </div>
+      <p>New Balance: {formatCurrency(transferResult?.newBalance || balance)}</p>
+      <button onClick={() => navigate("/dashboard")}>Back to Dashboard</button>
     </div>
   );
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-      padding: '2rem 1rem',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
-    }}>
-      <div style={{
-        maxWidth: '600px',
-        margin: '0 auto'
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: '2rem'
-        }}>
-          <button
-            onClick={() => navigate('/dashboard')}
-            style={{
-              background: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              width: '48px',
-              height: '48px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              marginRight: '1rem',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-            onMouseOut={(e) => e.target.style.background = 'white'}
-          >
-            ←
+    <div style={{ padding: "1rem", maxWidth: "600px", margin: "auto" }}>
+      {currentStep === 1 && <Step1_Details />}
+      {currentStep === 2 && <Step2_Payment />}
+      {currentStep === 3 && <Step3_Confirm />}
+      {currentStep === 4 && <Step4_Success />}
+
+      <div style={{ marginTop: "1rem" }}>
+        {currentStep > 1 && currentStep < 4 && (
+          <button onClick={handleBack}>Back</button>
+        )}
+        {currentStep < 3 && (
+          <button onClick={handleNext}>Next</button>
+        )}
+        {currentStep === 3 && (
+          <button onClick={processTransfer} disabled={loading}>
+            {loading ? "Processing..." : "Confirm & Send"}
           </button>
-          <h1 style={{
-            fontSize: '1.75rem',
-            fontWeight: '700',
-            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            margin: '0'
-          }}>
-            Send Money
-          </h1>
-        </div>
-
-        {/* Main Card */}
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '2rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          animation: 'fadeIn 0.5s ease-out'
-        }}>
-          {renderStepIndicator()}
-
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-
-          {/* Action Buttons */}
-          {currentStep < 3 && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: '2rem',
-              gap: '1rem'
-            }}>
-              {currentStep > 1 && (
-                <button
-                  onClick={handleBack}
-                  disabled={loading}
-                  style={{
-                    flex: '1',
-                    background: 'white',
-                    color: '#737373',
-                    border: '2px solid #e5e5e5',
-                    borderRadius: '12px',
-                    padding: '0.75rem 1.5rem',
-                    fontWeight: '600',
-                    fontSize: '1rem',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.5 : 1,
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => {
-                    if (!loading) {
-                      e.target.style.background = '#f8fafc';
-                      e.target.style.borderColor = '#d4d4d4';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!loading) {
-                      e.target.style.background = 'white';
-                      e.target.style.borderColor = '#e5e5e5';
-                    }
-                  }}
-                >
-                  Back
-                </button>
-              )}
-              
-              <button
-                onClick={currentStep === 1 ? handleNext : processTransfer}
-                disabled={loading}
-                style={{
-                  flex: '2',
-                  background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '0.75rem 1.5rem',
-                  fontWeight: '600',
-                  fontSize: '1rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.7 : 1,
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem'
-                }}
-                onMouseOver={(e) => {
-                  if (!loading) {
-                    e.target.style.background = 'linear-gradient(135deg, #1565c0 0%, #1b5e20 100%)';
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 10px 25px rgba(25, 118, 210, 0.3)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!loading) {
-                    e.target.style.background = 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)';
-                    e.target.style.transform = 'translateY(0px)';
-                    e.target.style.boxShadow = 'none';
-                  }
-                }}
-              >
-                {loading ? (
-                  <>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      border: '2px solid transparent',
-                      borderTop: '2px solid white',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    Processing...
-                  </>
-                ) : (
-                  currentStep === 1 ? 'Continue' : 'Send Money'
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Trust Indicators - PaySii inspired */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          gap: '2rem',
-          marginTop: '2rem',
-          padding: '1rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              🔒
-            </div>
-            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
-              Bank-level security
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              ⚡
-            </div>
-            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
-              Instant delivery
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              💰
-            </div>
-            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
-              Best exchange rates
-            </span>
-          </div>
-        </div>
+        )}
       </div>
 
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes zoomIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+      {/* ✅ Security Badges */}
+      <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.8rem", color: "#555" }}>
+        🔒 Secure | ✅ PCI Compliant | 🌍 Trusted Transfers
+      </div>
 
-        @media (max-width: 640px) {
-          [style*="gridTemplateColumns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      <SupportButton />
     </div>
   );
 };
