@@ -20,17 +20,45 @@ const Transfer = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [transferResult, setTransferResult] = useState(null);
 
+  // PaySii-inspired exchange rate and fee calculation
+  const exchangeRate = 110.45; // CAD to KES
+  const feePercentage = 0.01; // 1% fee
+  const fixedFee = 4.99; // Fixed fee like PaySii
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
     }
   }, [currentUser, navigate]);
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
     }).format(amount);
+  };
+
+  // PaySii-inspired currency conversion
+  const formatKES = (amount) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+    }).format(amount);
+  };
+
+  const calculateReceiveAmount = () => {
+    const amount = parseFloat(transferData.amount) || 0;
+    return (amount * exchangeRate).toFixed(2);
+  };
+
+  const calculateFee = () => {
+    const amount = parseFloat(transferData.amount) || 0;
+    return Math.max(amount * feePercentage, fixedFee);
+  };
+
+  const calculateTotal = () => {
+    const amount = parseFloat(transferData.amount) || 0;
+    return (amount + calculateFee()).toFixed(2);
   };
 
   const handleInputChange = (e) => {
@@ -166,7 +194,7 @@ const Transfer = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: currentStep >= step ? '#0ea5e9' : '#e5e5e5',
+            background: currentStep >= step ? 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)' : '#e5e5e5',
             color: currentStep >= step ? 'white' : '#737373',
             fontWeight: '600',
             fontSize: '0.875rem',
@@ -177,7 +205,7 @@ const Transfer = () => {
           <span style={{
             fontSize: '0.875rem',
             fontWeight: '500',
-            color: currentStep >= step ? '#0ea5e9' : '#737373'
+            color: currentStep >= step ? '#1976d2' : '#737373'
           }}>
             {step === 1 ? 'Details' : step === 2 ? 'Confirm' : 'Complete'}
           </span>
@@ -185,7 +213,7 @@ const Transfer = () => {
             <div style={{
               width: '2rem',
               height: '2px',
-              background: currentStep > step ? '#0ea5e9' : '#e5e5e5',
+              background: currentStep > step ? 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)' : '#e5e5e5',
               transition: 'all 0.2s ease'
             }} />
           )}
@@ -199,13 +227,109 @@ const Transfer = () => {
       <h2 style={{
         fontSize: '1.5rem',
         fontWeight: '700',
-        color: '#171717',
+        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
         marginBottom: '1.5rem',
         textAlign: 'center'
       }}>
-        Transfer Details
+        How much would you like to send?
       </h2>
       
+      {/* PaySii-inspired currency display */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '1rem', 
+        marginBottom: '2rem' 
+      }}>
+        {/* You Send - Canada */}
+        <div style={{
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          border: '2px solid #1976d2',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          position: 'relative'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <img src="https://flagcdn.com/w40/ca.png" alt="Canada" width="24" height="18" />
+            <span style={{ fontWeight: '600', color: '#1976d2' }}>You Send (CAD)</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute',
+              left: '0',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#1976d2',
+              fontSize: '2rem',
+              fontWeight: '700'
+            }}>
+              $
+            </span>
+            <input
+              type="text"
+              name="amount"
+              value={transferData.amount}
+              onChange={handleInputChange}
+              placeholder="0.00"
+              style={{
+                width: '100%',
+                padding: '0.5rem 0 0.5rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '2rem',
+                fontWeight: '700',
+                color: '#1976d2',
+                outline: 'none',
+                textAlign: 'right'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* They Receive - Kenya */}
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+          border: '2px solid #2e7d32',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          position: 'relative'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <img src="https://flagcdn.com/w40/ke.png" alt="Kenya" width="24" height="18" />
+            <span style={{ fontWeight: '600', color: '#2e7d32' }}>They Receive (KES)</span>
+          </div>
+          <div style={{
+            fontSize: '2rem',
+            fontWeight: '700',
+            color: '#2e7d32',
+            textAlign: 'right'
+          }}>
+            {calculateReceiveAmount()}
+          </div>
+        </div>
+      </div>
+
+      {/* Exchange Rate Info - PaySii style */}
+      <div style={{
+        background: '#f8fafc',
+        border: '1px solid #e5e5e5',
+        borderRadius: '12px',
+        padding: '1rem',
+        marginBottom: '1.5rem',
+        textAlign: 'center'
+      }}>
+        <div style={{ color: '#737373', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+          Exchange Rate: 1 CAD = {exchangeRate} KES
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#737373' }}>
+          <span>Fee: {formatCurrency(calculateFee())}</span>
+          <span>Total: {formatCurrency(parseFloat(calculateTotal()))}</span>
+        </div>
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
           <label style={{
@@ -235,7 +359,7 @@ const Transfer = () => {
             }}
             onFocus={(e) => {
               if (!validationErrors.recipientEmail) {
-                e.target.style.borderColor = '#0ea5e9';
+                e.target.style.borderColor = '#1976d2';
               }
             }}
             onBlur={(e) => {
@@ -251,71 +375,20 @@ const Transfer = () => {
           )}
         </div>
 
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Amount
-          </label>
-          <div style={{ position: 'relative' }}>
-            <span style={{
-              position: 'absolute',
-              left: '1rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#737373',
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>
-              $
-            </span>
-            <input
-              type="text"
-              name="amount"
-              value={transferData.amount}
-              onChange={handleInputChange}
-              placeholder="0.00"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem 0.75rem 2rem',
-                border: `2px solid ${validationErrors.amount ? '#ef4444' : '#e5e5e5'}`,
-                borderRadius: '12px',
-                fontSize: '1rem',
-                transition: 'all 0.2s ease',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => {
-                if (!validationErrors.amount) {
-                  e.target.style.borderColor = '#0ea5e9';
-                }
-              }}
-              onBlur={(e) => {
-                if (!validationErrors.amount) {
-                  e.target.style.borderColor = '#e5e5e5';
-                }
-              }}
-            />
-          </div>
-          {validationErrors.amount && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.amount}
-            </span>
-          )}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '0.5rem',
-            fontSize: '0.75rem',
-            color: '#737373'
-          }}>
-            <span>Available balance: {formatCurrency(balance)}</span>
-            <span>Max: $10,000</span>
-          </div>
+        {validationErrors.amount && (
+          <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '-1rem', display: 'block' }}>
+            {validationErrors.amount}
+          </span>
+        )}
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '0.75rem',
+          color: '#737373'
+        }}>
+          <span>Available balance: {formatCurrency(balance)}</span>
+          <span>Max: $10,000</span>
         </div>
 
         <div>
@@ -346,7 +419,7 @@ const Transfer = () => {
               boxSizing: 'border-box',
               fontFamily: 'inherit'
             }}
-            onFocus={(e) => e.target.style.borderColor = '#0ea5e9'}
+            onFocus={(e) => e.target.style.borderColor = '#1976d2'}
             onBlur={(e) => e.target.style.borderColor = '#e5e5e5'}
           />
         </div>
@@ -359,18 +432,21 @@ const Transfer = () => {
       <h2 style={{
         fontSize: '1.5rem',
         fontWeight: '700',
-        color: '#171717',
+        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
         marginBottom: '1.5rem',
         textAlign: 'center'
       }}>
         Confirm Transfer
       </h2>
 
-      {/* Transfer Summary */}
+      {/* Enhanced Transfer Summary */}
       <div style={{
-        background: '#f8fafc',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)',
         border: '1px solid #e5e5e5',
-        borderRadius: '12px',
+        borderRadius: '16px',
         padding: '1.5rem',
         marginBottom: '1.5rem'
       }}>
@@ -380,22 +456,28 @@ const Transfer = () => {
             <span style={{ fontWeight: '600', color: '#171717' }}>{transferData.recipientEmail}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#737373', fontSize: '0.875rem' }}>Amount:</span>
-            <span style={{ fontWeight: '700', color: '#171717', fontSize: '1.125rem' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>You Send:</span>
+            <span style={{ fontWeight: '700', color: '#1976d2', fontSize: '1.125rem' }}>
               {formatCurrency(parseFloat(transferData.amount || 0))}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>They Receive:</span>
+            <span style={{ fontWeight: '700', color: '#2e7d32', fontSize: '1.125rem' }}>
+              {formatKES(parseFloat(calculateReceiveAmount()))}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#737373', fontSize: '0.875rem' }}>Fee:</span>
             <span style={{ fontWeight: '600', color: '#737373' }}>
-              {formatCurrency(parseFloat(transferData.amount || 0) * 0.01)}
+              {formatCurrency(calculateFee())}
             </span>
           </div>
-          <div style={{ height: '1px', background: '#e5e5e5', margin: '0.5rem 0' }} />
+          <div style={{ height: '1px', background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)', margin: '0.5rem 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#171717', fontWeight: '600' }}>Total:</span>
             <span style={{ fontWeight: '700', color: '#171717', fontSize: '1.125rem' }}>
-              {formatCurrency(parseFloat(transferData.amount || 0) * 1.01)}
+              {formatCurrency(parseFloat(calculateTotal()))}
             </span>
           </div>
           {transferData.description && (
@@ -442,7 +524,7 @@ const Transfer = () => {
           }}
           onFocus={(e) => {
             if (!validationErrors.pin) {
-              e.target.style.borderColor = '#0ea5e9';
+              e.target.style.borderColor = '#1976d2';
             }
           }}
           onBlur={(e) => {
@@ -491,7 +573,7 @@ const Transfer = () => {
         width: '80px',
         height: '80px',
         borderRadius: '50%',
-        background: '#f0fdf4',
+        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -504,7 +586,10 @@ const Transfer = () => {
       <h2 style={{
         fontSize: '1.5rem',
         fontWeight: '700',
-        color: '#171717',
+        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
         marginBottom: '0.5rem'
       }}>
         Transfer Successful!
@@ -519,17 +604,23 @@ const Transfer = () => {
       </p>
 
       <div style={{
-        background: '#f8fafc',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)',
         border: '1px solid #e5e5e5',
-        borderRadius: '12px',
+        borderRadius: '16px',
         padding: '1.5rem',
         marginBottom: '2rem'
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#737373', fontSize: '0.875rem' }}>Amount Sent:</span>
-            <span style={{ fontWeight: '700', color: '#22c55e', fontSize: '1.125rem' }}>
+            <span style={{ fontWeight: '700', color: '#1976d2', fontSize: '1.125rem' }}>
               {formatCurrency(parseFloat(transferData.amount || 0))}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#737373', fontSize: '0.875rem' }}>They Received:</span>
+            <span style={{ fontWeight: '700', color: '#2e7d32', fontSize: '1.125rem' }}>
+              {formatKES(parseFloat(calculateReceiveAmount()))}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -562,8 +653,8 @@ const Transfer = () => {
           onClick={handleNewTransfer}
           style={{
             background: 'white',
-            color: '#0ea5e9',
-            border: '2px solid #0ea5e9',
+            color: '#1976d2',
+            border: '2px solid #1976d2',
             borderRadius: '12px',
             padding: '0.75rem 1.5rem',
             fontWeight: '600',
@@ -585,7 +676,7 @@ const Transfer = () => {
         <button
           onClick={() => navigate('/dashboard')}
           style={{
-            background: '#0ea5e9',
+            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
             color: 'white',
             border: 'none',
             borderRadius: '12px',
@@ -596,12 +687,12 @@ const Transfer = () => {
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
-            e.target.style.background = '#0284c7';
+            e.target.style.background = 'linear-gradient(135deg, #1565c0 0%, #1b5e20 100%)';
             e.target.style.transform = 'translateY(-2px)';
-            e.target.style.boxShadow = '0 10px 25px rgba(14, 165, 233, 0.3)';
+            e.target.style.boxShadow = '0 10px 25px rgba(25, 118, 210, 0.3)';
           }}
           onMouseOut={(e) => {
-            e.target.style.background = '#0ea5e9';
+            e.target.style.background = 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)';
             e.target.style.transform = 'translateY(0px)';
             e.target.style.boxShadow = 'none';
           }}
@@ -653,7 +744,10 @@ const Transfer = () => {
           <h1 style={{
             fontSize: '1.75rem',
             fontWeight: '700',
-            color: '#171717',
+            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: '0'
           }}>
             Send Money
@@ -721,7 +815,7 @@ const Transfer = () => {
                 disabled={loading}
                 style={{
                   flex: '2',
-                  background: '#0ea5e9',
+                  background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
@@ -738,14 +832,14 @@ const Transfer = () => {
                 }}
                 onMouseOver={(e) => {
                   if (!loading) {
-                    e.target.style.background = '#0284c7';
+                    e.target.style.background = 'linear-gradient(135deg, #1565c0 0%, #1b5e20 100%)';
                     e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 10px 25px rgba(14, 165, 233, 0.3)';
+                    e.target.style.boxShadow = '0 10px 25px rgba(25, 118, 210, 0.3)';
                   }
                 }}
                 onMouseOut={(e) => {
                   if (!loading) {
-                    e.target.style.background = '#0ea5e9';
+                    e.target.style.background = 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)';
                     e.target.style.transform = 'translateY(0px)';
                     e.target.style.boxShadow = 'none';
                   }
@@ -769,6 +863,74 @@ const Transfer = () => {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Trust Indicators - PaySii inspired */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: '2rem',
+          marginTop: '2rem',
+          padding: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              🔒
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
+              Bank-level security
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              ⚡
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
+              Instant delivery
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              💰
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
+              Best exchange rates
+            </span>
+          </div>
         </div>
       </div>
 
