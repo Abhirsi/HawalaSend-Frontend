@@ -50,11 +50,8 @@ const Dashboard = () => {
         console.log('Transactions response:', response.data);
         
         if (response.data && Array.isArray(response.data.transfers)) {
-          setTransactions(response.data.transfers);
-          console.log(`Loaded ${response.data.transactions.length} real transactions`);
-        } else if (response.data && Array.isArray(response.data)) {
-          setTransactions(response.data);
-          console.log(`Loaded ${response.data.length} real transactions`);
+          setTransactions(response.data.transaction);
+          console.log(`Loaded ${response.data.transfers.length} real transactions`);
         } else {
           console.log('No transactions found or invalid format');
           setTransactions([]);
