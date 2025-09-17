@@ -396,7 +396,7 @@ const Dashboard = () => {
             }}>
               Recent Money Transfers
             </h3>
-            {transactions.length > 0 && (
+            {(transactions || []).length > 0 && (
               <button onClick={() => navigate('/transactions')} style={{
                 background: 'none',
                 border: 'none',
