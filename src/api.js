@@ -89,17 +89,14 @@ export const authAPI = {
   }
 };
 
-// Transfer API
+// Update your transferAPI to include getHistory:
 export const transferAPI = {
   send: (transferData) => {
     console.log('💸 Sending transfer:', transferData.amount, 'to', transferData.recipient_email);
     return api.post('/transfers/send', transferData);
   },
-  
-  getHistory: () => {
-    console.log('📜 Fetching transfer history');
-    return api.get('/transfers/history');
-  }
+  // Add this line:
+  getHistory: () => api.get('/transfers/history'),
 };
 
 // Transaction API - Enhanced to match your backend

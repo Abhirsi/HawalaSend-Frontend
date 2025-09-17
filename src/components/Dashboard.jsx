@@ -33,7 +33,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [transactions, setTransactions] = useState([]);
-  const [balance, setBalance] = useState(2500.00); // This should come from backend too
+  const [balance, setBalance] = useState(0.00); // This should come from backend too
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -75,28 +75,15 @@ const Dashboard = () => {
     }
   }, [currentUser]);
 
-  const handleSendMoney = () => {
-    navigate('/transfer');
-  };
-
-  const handleViewTransactions = () => {
-    navigate('/transactions');
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatCurrency = (amount, currency = 'CAD') => {
+    return new Intl.NumberFormat('en-CA', {
       style: 'currency',
-      currency: 'USD'
+      currency: currency,
     }).format(amount);
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -105,88 +92,123 @@ const Dashboard = () => {
     });
   };
 
-  const getTransactionIcon = (transaction) => {
-    if (currentUser && transaction.sender_id === currentUser.id) {
-      return <ArrowUpwardIcon color="error" />;
-    } else {
-      return <ArrowDownwardIcon color="success" />;
-    }
-  };
-
-  const getTransactionType = (transaction) => {
-    if (currentUser && transaction.sender_id === currentUser.id) {
-      return 'Sent';
-    } else {
-      return 'Received';
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'failed':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-  if (!currentUser) {
+  if (loading) {
     return (
-      <Container>
-        <Alert severity="error">
-          Please log in to access your dashboard.
-        </Alert>
-      </Container>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #e5e5e5',
+            borderTop: '4px solid #1976d2',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem auto'
+          }} />
+          <p style={{ color: '#737373' }}>Loading your dashboard...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ flexGrow: 1 }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+      padding: '2rem 1rem',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Welcome back, {currentUser.first_name}!
-          </Typography>
-          <Button variant="outlined" onClick={handleLogout}>
-            Logout
-          </Button>
-        </Box>
+        <div style={{
+          marginBottom: '2rem',
+          textAlign: 'center'
+        }}>
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '700',
+            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            margin: '0 0 0.5rem 0'
+          }}>
+            Welcome to HawalaSend
+          </h1>
+          <p style={{
+            fontSize: '1rem',
+            color: '#737373',
+            margin: '0'
+          }}>
+            Send money to Kenya quickly and securely
+          </p>
+        </div>
 
-        <Grid container spacing={3}>
-          {/* Balance Card */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <BalanceIcon sx={{ mr: 1 }} />
-                  <Typography variant="h6">
-                    Account Balance
-                  </Typography>
-                </Box>
-                <Typography variant="h4">
-                  {formatCurrency(balance)}
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
-                  Available for transfer
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            color: '#dc2626'
+          }}>
+            {error}
+          </div>
+        )}
 
-          {/* Quick Actions */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Typography variant="h6" gutterBottom>
-                Quick Actions
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Button
+        {/* Balance Card */}
+        <div style={{
+          background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+          borderRadius: '16px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          color: 'white',
+          boxShadow: '0 10px 25px rgba(25, 118, 210, 0.3)'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '2rem',
+            alignItems: 'center'
+          }}>
+            <div>
+              <p style={{
+                fontSize: '0.875rem',
+                opacity: 0.9,
+                margin: '0 0 0.5rem 0'
+              }}>
+                Available Balance
+              </p>
+              <h2 style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                margin: '0 0 0.5rem 0'
+              }}>
+                {formatCurrency(balance)}
+              </h2>
+              <p style={{
+                fontSize: '0.875rem',
+                opacity: 0.8,
+                margin: '0'
+              }}>
+                Ready to transfer worldwide
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+                                <Button
                     variant="contained"
                     startIcon={<SendIcon />}
                     fullWidth
@@ -196,108 +218,400 @@ const Dashboard = () => {
                   >
                     Transfer Funds
                   </Button>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ReceiptIcon />}
-                    fullWidth
-                    size="large"
-                    onClick={handleViewTransactions}
-                    sx={{ py: 2 }}
-                  >
-                    View Transactions
-                  </Button>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
+            </div>
+          </div>
+        </div>
 
-          {/* Recent Transactions */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TrendingUpIcon sx={{ mr: 1 }} />
-                <Typography variant="h6">
-                  Recent Transactions
-                </Typography>
-              </Box>
+        {/* Quick Actions */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onClick={() => navigate('/transfer')}
+          onMouseOver={(e) => {
+            e.target.style.transform = 'translateY(-4px)';
+            e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = 'translateY(0px)';
+            e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+          }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              fontSize: '1.5rem'
+            }}>
+              🚀
+            </div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#171717',
+              margin: '0 0 0.5rem 0'
+            }}>
+              Send Money Fast
+            </h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#737373',
+              margin: '0'
+            }}>
+              Transfer money to Kenya in minutes with competitive rates
+            </p>
+          </div>
 
-              {error && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.transform = 'translateY(-4px)';
+            e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = 'translateY(0px)';
+            e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+          }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #2e7d32 0%, #1976d2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              fontSize: '1.5rem'
+            }}>
+              📊
+            </div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#171717',
+              margin: '0 0 0.5rem 0'
+            }}>
+              Live Exchange Rates
+            </h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#737373',
+              margin: '0 0 0.5rem 0'
+            }}>
+              Current rate: 1 CAD = 110.45 KES
+            </p>
+            <p style={{
+              fontSize: '0.75rem',
+              color: '#2e7d32',
+              margin: '0',
+              fontWeight: '500'
+            }}>
+              Updated every minute
+            </p>
+          </div>
 
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress />
-                </Box>
-              ) : transactions.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No transactions found. Start by sending your first transfer!
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<SendIcon />}
-                    onClick={handleSendMoney}
-                    sx={{ mt: 2 }}
-                  >
-                    Send Your First Transfer
-                  </Button>
-                </Box>
-              ) : (
-                <List>
-                  {transactions.slice(0, 5).map((transaction, index) => (
-                    <React.Fragment key={transaction.id}>
-                      <ListItem>
-                        <ListItemIcon>
-                          {getTransactionIcon(transaction)}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography variant="body1">
-                                {getTransactionType(transaction)} - {transaction.description || 'Money Transfer'}
-                              </Typography>
-                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                                {formatCurrency(transaction.amount)}
-                              </Typography>
-                            </Box>
-                          }
-                          secondary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                              <Typography variant="body2" color="text.secondary">
-                                {transaction.otherParty ? `To/From: ${transaction.otherParty}` : ''} • {formatDate(transaction.createdAt)}
-                              </Typography>
-                              <Chip 
-                                label={transaction.status} 
-                                size="small" 
-                                color={getStatusColor(transaction.status)}
-                              />
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                      {index < Math.min(transactions.length - 1, 4) && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.transform = 'translateY(-4px)';
+            e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = 'translateY(0px)';
+            e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+          }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              fontSize: '1.5rem'
+            }}>
+              🔒
+            </div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#171717',
+              margin: '0 0 0.5rem 0'
+            }}>
+              Secure & Regulated
+            </h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#737373',
+              margin: '0'
+            }}>
+              FINTRAC compliant with bank-level security
+            </p>
+          </div>
+        </div>
 
-              {transactions.length > 5 && (
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Button variant="text" onClick={handleViewTransactions}>
-                    View All Transactions
-                  </Button>
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
-    </Container>
+        {/* Recent Transactions */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.5rem'
+          }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#171717',
+              margin: '0'
+            }}>
+              Recent Money Transfers
+            </h3>
+            {transactions.length > 0 && (
+              <button style={{
+                background: 'none',
+                border: 'none',
+                color: '#1976d2',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}>
+                View All
+              </button>
+            )}
+          </div>
+
+          {transactions.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem 1rem',
+              color: '#737373'
+            }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem auto',
+                fontSize: '2rem'
+              }}>
+                💸
+              </div>
+              <h4 style={{
+                fontSize: '1rem',
+                fontWeight: '500',
+                color: '#171717',
+                margin: '0 0 0.5rem 0'
+              }}>
+                No transfers yet
+              </h4>
+              <p style={{
+                fontSize: '0.875rem',
+                margin: '0 0 1.5rem 0'
+              }}>
+                Your recent money transfers will appear here
+              </p>
+              <button
+                onClick={() => navigate('/transfer')}
+                style={{
+                  background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #1565c0 0%, #1b5e20 100%)';
+                  e.target.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)';
+                  e.target.style.transform = 'translateY(0px)';
+                }}
+              >
+                Send Your First Transfer
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {transactions.slice(0, 5).map((transaction, index) => (
+                <div key={transaction.id || index} style={{
+                  padding: '1rem',
+                  border: '1px solid #e5e5e5',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = '#f8fafc';
+                  e.target.style.borderColor = '#1976d2';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'white';
+                  e.target.style.borderColor = '#e5e5e5';
+                }}
+                >
+                  <div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#171717',
+                      marginBottom: '0.25rem'
+                    }}>
+                      To: {transaction.recipient_email}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#737373'
+                    }}>
+                      {formatDate(transaction.created_at)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#171717'
+                    }}>
+                      {formatCurrency(parseFloat(transaction.amount_cad))}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: transaction.status === 'completed' ? '#2e7d32' : '#737373',
+                      fontWeight: '500'
+                    }}>
+                      {transaction.status === 'completed' ? '✅ Completed' : 'Processing'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Trust Indicators */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: '2rem',
+          marginTop: '2rem',
+          padding: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              🏛️
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
+              FINTRAC Registered
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              🔐
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
+              256-bit SSL Encryption
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              ⚡
+            </div>
+            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
+              5-Minute Transfers
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+          [style*="gridTemplateColumns"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 

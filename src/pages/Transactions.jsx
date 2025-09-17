@@ -90,17 +90,27 @@ const Transactions = () => {
   }, [transactions, searchTerm, filterType, filterStatus]);
 
   const fetchTransactions = async () => {
-    try {
-      setTimeout(() => {
-        setTransactions(mockTransactions);
-        setLoading(false);
-      }, 1200);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setTransactions(mockTransactions);
-      setLoading(false);
+  try {
+    setLoading(true);
+    console.log('Fetching transactions from /transfers/history');
+    
+    const response = await transferAPI.getHistory();
+    console.log('Transfer history response:', response.data);
+    
+    if (response.data && Array.isArray(response.data.transfers)) {
+      setTransactions(response.data.transfers);
+      console.log(`Loaded ${response.data.transfers.length} real transactions`);
+    } else {
+      console.log('No transactions found or invalid format');
+      setTransactions([]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching transaction history:', error);
+    setTransactions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const applyFilters = () => {
     let filtered = [...transactions];
