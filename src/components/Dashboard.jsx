@@ -42,33 +42,28 @@ const Dashboard = () => {
   // Fetch real transactions from backend
   useEffect(() => {
     const fetchTransactions = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching transactions from /transactions');
-        
-        const response = await transferAPI.getHistory();
-        console.log('Transactions response:', response.data);
-        
-        if (response.data && Array.isArray(response.data.transfers)) {
-          setTransactions(response.data.transaction);
-          console.log(`Loaded ${response.data.transfers.length} real transactions`);
-            //Debug process
-          console.log('First transaction object:', transactions[0]);
-          console.log('Transaction properties:', Object.keys(transactions[0] || {}));
-
-        } else {
-          console.log('No transactions found or invalid format');
-          setTransactions([]);
-        }
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-        
-        // Fallback to empty array if API fails
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    setLoading(true);
+    const response = await transferAPI.getHistory();
+    
+    // Debug the raw response first
+    console.log('Raw response:', response.data);
+    
+    if (response.data && Array.isArray(response.data.transfers)) {
+      console.log('Transfers array:', response.data.transfers);
+      console.log('First transfer:', response.data.transfers[0]);
+      console.log('Transfer keys:', Object.keys(response.data.transfers[0] || {}));
+      
+      setTransactions(response.data.transfers);
+      console.log(`Loaded ${response.data.transfers.length} real transactions`);
+    }
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    setTransactions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
     if (currentUser) {
       fetchTransactions();
