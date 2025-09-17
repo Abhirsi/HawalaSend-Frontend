@@ -95,8 +95,9 @@ export const transferAPI = {
     console.log('💸 Sending transfer:', transferData.amount, 'to', transferData.recipient_email);
     return api.post('/transfers/send', transferData);
   },
-  // Add this line:
   getHistory: () => api.get('/transfers/history'),
+  // Add this line:
+  getBalance: () => api.get('/transfers/balance'),
 };
 
 // Transaction API - Enhanced to match your backend

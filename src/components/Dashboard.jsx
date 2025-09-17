@@ -499,7 +499,7 @@ const Dashboard = () => {
                       color: '#171717',
                       marginBottom: '0.25rem'
                     }}>
-                      To: {transaction.recipient_email}
+                      To: {transaction.other_party_email}
                     </div>
                     <div style={{
                       fontSize: '0.75rem',
@@ -514,7 +514,7 @@ const Dashboard = () => {
                       fontWeight: '600',
                       color: '#171717'
                     }}>
-                      {formatCurrency(parseFloat(transaction.amount_cad))}
+                      {formatCurrency(transaction.amount)}
                     </div>
                     <div style={{
                       fontSize: '0.75rem',
