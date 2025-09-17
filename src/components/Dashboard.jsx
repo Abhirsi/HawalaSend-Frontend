@@ -213,7 +213,7 @@ const Dashboard = () => {
                     startIcon={<SendIcon />}
                     fullWidth
                     size="large"
-                    onClick={handleSendMoney}
+                    onClick={() => navigate('/transfer')}
                     sx={{ py: 2 }}
                   >
                     Transfer Funds
