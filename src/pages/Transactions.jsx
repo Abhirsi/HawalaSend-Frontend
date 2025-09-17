@@ -16,18 +16,7 @@ const Transactions = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const mockTransactions = [
-    {
-      id: 1,
-      type: 'received',
-      amount: 150.00,
-      fee: 1.50,
-      description: 'Payment for freelance work',
-      other_party_email: 'client@company.com',
-      other_party_username: 'client_user',
-      status: 'completed',
-      created_at: '2025-01-10T14:30:00Z',
-      reference_id: 'TXN-001-2025'
-    },
+   
     {
       id: 2,
       type: 'sent',
@@ -52,18 +41,7 @@ const Transactions = () => {
       created_at: '2025-01-01T09:00:00Z',
       reference_id: 'TXN-003-2025'
     },
-    {
-      id: 4,
-      type: 'received',
-      amount: 500.00,
-      fee: 5.00,
-      description: 'Salary payment',
-      other_party_email: 'payroll@company.com',
-      other_party_username: 'company_payroll',
-      status: 'completed',
-      created_at: '2024-12-31T12:00:00Z',
-      reference_id: 'TXN-004-2024'
-    },
+   
     {
       id: 5,
       type: 'sent',

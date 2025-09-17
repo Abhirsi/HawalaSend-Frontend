@@ -67,6 +67,10 @@ const Dashboard = () => {
       }
     };
 
+    // In your Dashboard.jsx, add this after setTransactions:
+    console.log('First transaction object:', transactions[0]);
+    console.log('Transaction properties:', Object.keys(transactions[0] || {}));
+
     if (currentUser) {
       fetchTransactions();
     }
