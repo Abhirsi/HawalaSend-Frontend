@@ -52,13 +52,16 @@ const Dashboard = () => {
         if (response.data && Array.isArray(response.data.transfers)) {
           setTransactions(response.data.transaction);
           console.log(`Loaded ${response.data.transfers.length} real transactions`);
+            //Debug process
+          console.log('First transaction object:', transactions[0]);
+          console.log('Transaction properties:', Object.keys(transactions[0] || {}));
+
         } else {
           console.log('No transactions found or invalid format');
           setTransactions([]);
         }
       } catch (error) {
         console.error('Error fetching transactions:', error);
-        setError('Failed to load transactions. Using demo data.');
         
         // Fallback to empty array if API fails
         setTransactions([]);
@@ -66,10 +69,6 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
-
-    // In your Dashboard.jsx, add this after setTransactions:
-    console.log('First transaction object:', transactions[0]);
-    console.log('Transaction properties:', Object.keys(transactions[0] || {}));
 
     if (currentUser) {
       fetchTransactions();
