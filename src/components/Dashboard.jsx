@@ -410,7 +410,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {transactions.length === 0 ? (
+          {(transactions || []).length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '3rem 1rem',
