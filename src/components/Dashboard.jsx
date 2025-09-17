@@ -46,7 +46,7 @@ const Dashboard = () => {
         setLoading(true);
         console.log('Fetching transactions from /transactions');
         
-        const response = await transactionAPI.getAll();
+        const response = await transferAPI.getHistory();
         console.log('Transactions response:', response.data);
         
         if (response.data && Array.isArray(response.data.transactions)) {
@@ -400,7 +400,7 @@ const Dashboard = () => {
               Recent Money Transfers
             </h3>
             {transactions.length > 0 && (
-              <button style={{
+              <button onClick={() => navigate('/transactions')} style={{
                 background: 'none',
                 border: 'none',
                 color: '#1976d2',
