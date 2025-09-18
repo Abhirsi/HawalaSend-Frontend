@@ -10,6 +10,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sendAmount, setSendAmount] = useState('');
+  const [receiveAmount, setReceiveAmount] = useState('');
+  const [sendCurrency, setSendCurrency] = useState('USD');
+  const [receiveCurrency, setReceiveCurrency] = useState('KES');
+
+  // Exchange rates
+  const exchangeRates = {
+    'USD_to_KES': 150.25,
+    'CAD_to_KES': 110.45
+  };
 
   // Fetch transactions on mount
   useEffect(() => {
@@ -51,6 +61,29 @@ const Dashboard = () => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [menuOpen]);
+
+  // Handle amount changes with live calculation
+  const handleSendAmountChange = (value) => {
+    setSendAmount(value);
+    if (value && !isNaN(value)) {
+      const rate = sendCurrency === 'USD' ? exchangeRates.USD_to_KES : exchangeRates.CAD_to_KES;
+      const calculated = (parseFloat(value) * rate).toFixed(2);
+      setReceiveAmount(calculated);
+    } else {
+      setReceiveAmount('');
+    }
+  };
+
+  const handleReceiveAmountChange = (value) => {
+    setReceiveAmount(value);
+    if (value && !isNaN(value)) {
+      const rate = sendCurrency === 'USD' ? exchangeRates.USD_to_KES : exchangeRates.CAD_to_KES;
+      const calculated = (parseFloat(value) / rate).toFixed(2);
+      setSendAmount(calculated);
+    } else {
+      setSendAmount('');
+    }
+  };
 
   const formatCurrency = (amount, currency = 'CAD') => {
     return new Intl.NumberFormat('en-CA', {
@@ -104,272 +137,235 @@ const Dashboard = () => {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-      padding: '2rem 1rem',
+      padding: '1rem',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
       position: 'relative'
     }}>
-      {/* User Menu Button - Top Right */}
-      <div className="user-menu" style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 1000
+      {/* Top Navigation Bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '2rem',
+        padding: '1rem 0'
       }}>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setMenuOpen(!menuOpen);
-          }}
-          style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
+        {/* Logo - Left Side */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          {/* SVG Logo */}
+          <div style={{
+            width: '48px',
+            height: '48px',
             background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-            border: 'none',
-            cursor: 'pointer',
+            borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: '1.25rem',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.transform = 'scale(1.05)';
-            e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
-          }}
-        >
-          {currentUser?.first_name?.[0]?.toUpperCase() || 'U'}
-        </button>
-
-        {/* Dropdown Menu */}
-        {menuOpen && (
-          <div style={{
-            position: 'absolute',
-            top: '60px',
-            right: '0',
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-            border: '1px solid #e5e5e5',
-            minWidth: '200px',
-            overflow: 'hidden'
+            boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)'
           }}>
-            <div style={{ padding: '0.5rem' }}>
-              <div style={{
-                padding: '0.75rem 1rem',
-                borderBottom: '1px solid #e5e5e5',
-                background: '#f8fafc'
-              }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#171717' }}>
-                  {currentUser?.first_name} {currentUser?.last_name}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#737373' }}>
-                  {currentUser?.email}
-                </div>
-              </div>
-              
-              <button
-                onClick={() => {
-                  navigate('/dashboard');
-                  setMenuOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-                onMouseOut={(e) => e.target.style.background = 'none'}
-              >
-                🏠 Dashboard
-              </button>
-              
-              <button
-                onClick={() => {
-                  navigate('/profile');
-                  setMenuOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-                onMouseOut={(e) => e.target.style.background = 'none'}
-              >
-                👤 Profile
-              </button>
-              
-              <button
-                onClick={() => {
-                  navigate('/profile');
-                  setMenuOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-                onMouseOut={(e) => e.target.style.background = 'none'}
-              >
-                ⚙️ Settings
-              </button>
-              
-              <hr style={{margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5'}} />
-              
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/auth/login');
-                }}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  color: '#dc2626'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#fef2f2'}
-                onMouseOut={(e) => e.target.style.background = 'none'}
-              >
-                🚪 Logout
-              </button>
-            </div>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path 
+                d="M12 2L22 12L12 22L2 12L12 2Z" 
+                fill="white" 
+                fillOpacity="0.9"
+              />
+              <path 
+                d="M8 12L12 8L16 12L12 16L8 12Z" 
+                fill="white"
+              />
+              <path 
+                d="M12 4L20 12L12 20" 
+                stroke="white" 
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
-        )}
-      </div>
-
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{
-          marginBottom: '2rem',
-          textAlign: 'center'
-        }}>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: '700',
-            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            margin: '0 0 0.5rem 0'
-          }}>
-            Welcome to HawalaSend
-          </h1>
-          <p style={{
-            fontSize: '1rem',
-            color: '#737373',
-            margin: '0'
-          }}>
-            Send money to Kenya quickly and securely
-          </p>
+          
+          {/* Brand Name */}
+          <div>
+            <h1 style={{
+              fontSize: '1.75rem',
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: '0',
+              letterSpacing: '-0.02em'
+            }}>
+              HawalaSend
+            </h1>
+            <p style={{
+              fontSize: '0.75rem',
+              color: '#737373',
+              margin: '0',
+              fontWeight: '500'
+            }}>
+              Money Transfers
+            </p>
+          </div>
         </div>
 
-        {/* Logo Header */}
-<div style={{
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: '2rem',
-  padding: '1rem',
-  background: 'white',
-  borderRadius: '16px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-}}>
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem'
-  }}>
-    {/* Logo Icon */}
-    <div style={{
-      width: '48px',
-      height: '48px',
-      background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-      borderRadius: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)'
-    }}>
-      {/* Arrow Symbol */}
-      <div style={{
-        color: 'white',
-        fontSize: '24px',
-        fontWeight: 'bold',
-        transform: 'rotate(45deg)'
-      }}>
-        ➤
-      </div>
-    </div>
-    
-    {/* Brand Name */}
-    <div>
-      <h2 style={{
-        fontSize: '2rem',
-        fontWeight: '700',
-        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-        backgroundClip: 'text',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        margin: '0',
-        letterSpacing: '-0.02em'
-      }}>
-        HawalaSend
-      </h2>
-      <p style={{
-        fontSize: '0.875rem',
-        color: '#737373',
-        margin: '0',
-        fontWeight: '500'
-      }}>
-        Canada ↔ Kenya Money Transfers
-      </p>
-    </div>
-  </div>
-</div>
+        {/* User Menu - Right Side */}
+        <div className="user-menu" style={{
+          position: 'relative',
+          zIndex: 1000
+        }}>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            style={{
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '1.25rem',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {currentUser?.first_name?.[0]?.toUpperCase() || 'U'}
+          </button>
 
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '60px',
+              right: '0',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #e5e5e5',
+              minWidth: '200px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ padding: '0.5rem' }}>
+                <div style={{
+                  padding: '0.75rem 1rem',
+                  borderBottom: '1px solid #e5e5e5',
+                  background: '#f8fafc'
+                }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#171717' }}>
+                    {currentUser?.first_name} {currentUser?.last_name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#737373' }}>
+                    {currentUser?.email}
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    navigate('/dashboard');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}
+                >
+                  🏠 Dashboard
+                </button>
+                
+                <button
+                  onClick={() => {
+                    navigate('/profile');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}
+                >
+                  👤 Profile
+                </button>
+                
+                <button
+                  onClick={() => {
+                    navigate('/profile');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}
+                >
+                  ⚙️ Settings
+                </button>
+                
+                <hr style={{margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5'}} />
+                
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/auth/login');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    color: '#dc2626'
+                  }}
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         {error && (
           <div style={{
             background: '#fef2f2',
@@ -383,120 +379,239 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Transfer Action Cards */}
+        {/* Transfer Calculator Box */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '1.5rem',
-          marginBottom: '2rem'
+          background: 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
         }}>
-          <div 
-            onClick={() => navigate('/transfer')}
-            style={{
-              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-              border: '2px solid #1976d2',
-              borderRadius: '16px',
-              padding: '2rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textAlign: 'center'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(25, 118, 210, 0.3)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0px)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <img 
-              src="https://flagcdn.com/w40/ca.png" 
-              alt="Canada" 
-              width="40" 
-              height="30" 
-              style={{ marginBottom: '1rem', borderRadius: '4px' }}
-            />
-            <h3 style={{
-              color: '#1976d2',
-              margin: '0 0 0.5rem 0',
-              fontSize: '1.25rem',
-              fontWeight: '700'
-            }}>
-              Send from Canada
-            </h3>
-            <p style={{
-              color: '#737373',
-              margin: '0 0 1rem 0',
-              fontSize: '0.875rem'
-            }}>
-              Fast CAD to KES transfers
-            </p>
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: '700',
+            color: '#171717',
+            marginBottom: '1.5rem',
+            textAlign: 'center'
+          }}>
+            Send Money Globally
+          </h2>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto 1fr',
+            gap: '1rem',
+            alignItems: 'end',
+            marginBottom: '1.5rem'
+          }}>
+            {/* Send Amount */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#737373',
+                marginBottom: '0.5rem'
+              }}>
+                You Send
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: '2px solid #e5e5e5',
+                borderRadius: '12px',
+                padding: '0.75rem 1rem',
+                background: '#f8fafc'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginRight: '1rem'
+                }}>
+                  <img 
+                    src={sendCurrency === 'USD' ? "https://flagcdn.com/w20/us.png" : "https://flagcdn.com/w20/ca.png"} 
+                    alt={sendCurrency === 'USD' ? "USA" : "Canada"} 
+                    width="24" 
+                    height="18" 
+                  />
+                  <select
+                    value={sendCurrency}
+                    onChange={(e) => {
+                      setSendCurrency(e.target.value);
+                      if (sendAmount) {
+                        handleSendAmountChange(sendAmount);
+                      }
+                    }}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="USD">USD</option>
+                    <option value="CAD">CAD</option>
+                  </select>
+                </div>
+                <input
+                  type="number"
+                  value={sendAmount}
+                  onChange={(e) => handleSendAmountChange(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    width: '100%',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Exchange Icon */}
             <div style={{
-              background: 'rgba(25, 118, 210, 0.1)',
-              borderRadius: '8px',
-              padding: '0.5rem',
-              fontSize: '0.75rem',
-              color: '#1976d2',
-              fontWeight: '600'
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '1.2rem'
             }}>
-              1 CAD = 110.45 KES
+              ⇄
+            </div>
+
+            {/* Receive Amount */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#737373',
+                marginBottom: '0.5rem'
+              }}>
+                They Receive
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: '2px solid #2e7d32',
+                borderRadius: '12px',
+                padding: '0.75rem 1rem',
+                background: '#f0fdf4'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginRight: '1rem'
+                }}>
+                  <img 
+                    src="https://flagcdn.com/w20/ke.png" 
+                    alt="Kenya" 
+                    width="24" 
+                    height="18" 
+                  />
+                  <span style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}>
+                    KES
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  value={receiveAmount}
+                  onChange={(e) => handleReceiveAmountChange(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    width: '100%',
+                    outline: 'none',
+                    color: '#2e7d32'
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          <div 
-            onClick={() => navigate('/transfer')}
-            style={{
-              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-              border: '2px solid #2e7d32',
-              borderRadius: '16px',
-              padding: '2rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textAlign: 'center'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(46, 125, 50, 0.3)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0px)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <img 
-              src="https://flagcdn.com/w40/ke.png" 
-              alt="Kenya" 
-              width="40" 
-              height="30" 
-              style={{ marginBottom: '1rem', borderRadius: '4px' }}
-            />
-            <h3 style={{
-              color: '#2e7d32',
-              margin: '0 0 0.5rem 0',
-              fontSize: '1.25rem',
-              fontWeight: '700'
-            }}>
-              Receive in Kenya
-            </h3>
-            <p style={{
-              color: '#737373',
-              margin: '0 0 1rem 0',
-              fontSize: '0.875rem'
-            }}>
-              Direct to M-Pesa accounts
-            </p>
+          {/* Exchange Rate & Fees */}
+          <div style={{
+            background: '#f8fafc',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '1.5rem'
+          }}>
             <div style={{
-              background: 'rgba(46, 125, 50, 0.1)',
-              borderRadius: '8px',
-              padding: '0.5rem',
-              fontSize: '0.75rem',
-              color: '#2e7d32',
-              fontWeight: '600'
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.5rem'
             }}>
-              M-Pesa Ready
+              <span style={{ fontSize: '0.875rem', color: '#737373' }}>
+                Exchange Rate:
+              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>
+                1 {sendCurrency} = {sendCurrency === 'USD' ? exchangeRates.USD_to_KES : exchangeRates.CAD_to_KES} KES
+              </span>
+            </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.5rem'
+            }}>
+              <span style={{ fontSize: '0.875rem', color: '#737373' }}>
+                Fee:
+              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>
+                {formatCurrency((parseFloat(sendAmount || 0) * 0.01) + 4.99, sendCurrency)}
+              </span>
+            </div>
+            <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5' }} />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>
+                Total:
+              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: '700' }}>
+                {formatCurrency(parseFloat(sendAmount || 0) + (parseFloat(sendAmount || 0) * 0.01) + 4.99, sendCurrency)}
+              </span>
             </div>
           </div>
+
+          {/* Send Money Button */}
+          <button
+            onClick={() => navigate('/transfer')}
+            disabled={!sendAmount || parseFloat(sendAmount) <= 0}
+            style={{
+              width: '100%',
+              padding: '1rem 2rem',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: !sendAmount || parseFloat(sendAmount) <= 0 ? 'not-allowed' : 'pointer',
+              opacity: !sendAmount || parseFloat(sendAmount) <= 0 ? 0.5 : 1,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Send Money
+          </button>
         </div>
 
         {/* Recent Transactions */}
@@ -518,7 +633,7 @@ const Dashboard = () => {
               color: '#171717',
               margin: '0'
             }}>
-              Recent Money Transfers
+              Recent Transactions
             </h3>
             {transactions.length > 0 && (
               <button 
@@ -566,25 +681,10 @@ const Dashboard = () => {
               </h4>
               <p style={{
                 fontSize: '0.875rem',
-                margin: '0 0 1.5rem 0'
+                margin: '0'
               }}>
-                Your recent money transfers will appear here
+                Use the calculator above to send your first transfer
               </p>
-              <button
-                onClick={() => navigate('/transfer')}
-                style={{
-                  background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '0.75rem 1.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Send Your First Transfer
-              </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -633,71 +733,6 @@ const Dashboard = () => {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Trust Indicators */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          gap: '2rem',
-          marginTop: '2rem',
-          padding: '1rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '12px'
-            }}>
-              🏛️
-            </div>
-            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
-              FINTRAC Registered
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '12px'
-            }}>
-              🔐
-            </div>
-            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
-              SSL Encryption
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '12px'
-            }}>
-              ⚡
-            </div>
-            <span style={{ fontSize: '0.875rem', color: '#737373', fontWeight: '500' }}>
-              5-Minute Transfers
-            </span>
-          </div>
         </div>
       </div>
 
