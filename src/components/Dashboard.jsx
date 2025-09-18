@@ -29,7 +29,6 @@ import {
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
 
-const [menuOpen, setMenuOpen] = useState(false);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -38,16 +37,17 @@ const Dashboard = () => {
   const [balance, setBalance] = useState(0.00); // This should come from backend too
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  console.log('Dashboard mounted with user:', currentUser);
-
-  useEffect(() => {
+   useEffect(() => {
   const handleClickOutside = () => setMenuOpen(false);
   if (menuOpen) {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }
 }, [menuOpen]);
+
+  console.log('Dashboard mounted with user:', currentUser);
 
   // Fetch real transactions from backend
   useEffect(() => {
