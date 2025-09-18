@@ -29,6 +29,8 @@ import {
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
 
+const [menuOpen, setMenuOpen] = useState(false);
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
@@ -38,6 +40,14 @@ const Dashboard = () => {
   const [error, setError] = useState('');
 
   console.log('Dashboard mounted with user:', currentUser);
+
+  useEffect(() => {
+  const handleClickOutside = () => setMenuOpen(false);
+  if (menuOpen) {
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }
+}, [menuOpen]);
 
   // Fetch real transactions from backend
   useEffect(() => {
@@ -164,60 +174,162 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Header with Logout */}
+        {/* Menu Button - Top Left */}
 <div style={{
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '2rem',
-  padding: '1rem',
-  background: 'white',
-  borderRadius: '12px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  position: 'relative',
+  marginBottom: '2rem'
 }}>
-  <div>
-    <h2 style={{margin: '0 0 0.25rem 0', color: '#171717'}}>
-      Welcome back, {currentUser?.first_name || 'User'}!
-    </h2>
-    <p style={{margin: '0', color: '#737373', fontSize: '0.875rem'}}>
-      Manage your money transfers
-    </p>
-  </div>
-  
-  <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-    <button
-      onClick={() => navigate('/profile')}
-      style={{
-        background: 'none',
-        border: '1px solid #e5e5e5',
-        borderRadius: '8px',
-        padding: '0.5rem 1rem',
-        cursor: 'pointer',
-        fontSize: '0.875rem'
-      }}
-    >
-      Settings
-    </button>
-    
-    <button
-      onClick={() => {
-        logout();
-        navigate('/auth/login');
-      }}
-      style={{
-        background: '#dc2626',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        padding: '0.5rem 1rem',
-        cursor: 'pointer',
-        fontSize: '0.875rem',
-        fontWeight: '500'
-      }}
-    >
-      Logout
-    </button>
-  </div>
+  <button
+    onClick={() => setMenuOpen(!menuOpen)}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      padding: '0.75rem 1rem',
+      background: 'white',
+      border: '2px solid #1976d2',
+      borderRadius: '12px',
+      cursor: 'pointer',
+      fontSize: '0.875rem',
+      fontWeight: '600',
+      color: '#1976d2',
+      boxShadow: '0 2px 8px rgba(25, 118, 210, 0.1)'
+    }}
+  >
+    <div style={{
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontSize: '0.875rem',
+      fontWeight: 'bold'
+    }}>
+      {currentUser?.first_name?.[0] || 'U'}
+    </div>
+    {currentUser?.first_name || 'Menu'}
+    <span style={{fontSize: '0.75rem'}}>▼</span>
+  </button>
+
+  {/* Dropdown Menu */}
+  {menuOpen && (
+    <div style={{
+      position: 'absolute',
+      top: '100%',
+      left: '0',
+      marginTop: '0.5rem',
+      background: 'white',
+      borderRadius: '12px',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+      border: '1px solid #e5e5e5',
+      minWidth: '200px',
+      zIndex: 1000
+    }}>
+      <div style={{padding: '0.5rem'}}>
+        <button
+          onClick={() => {
+            navigate('/dashboard');
+            setMenuOpen(false);
+          }}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+          onMouseOut={(e) => e.target.style.background = 'none'}
+        >
+          🏠 Dashboard
+        </button>
+        
+        <button
+          onClick={() => {
+            navigate('/profile');
+            setMenuOpen(false);
+          }}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+          onMouseOut={(e) => e.target.style.background = 'none'}
+        >
+          👤 Profile
+        </button>
+        
+        <button
+          onClick={() => {
+            navigate('/profile');
+            setMenuOpen(false);
+          }}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+          onMouseOut={(e) => e.target.style.background = 'none'}
+        >
+          ⚙️ Settings
+        </button>
+        
+        <hr style={{margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5'}} />
+        
+        <button
+          onClick={() => {
+            logout();
+            navigate('/auth/login');
+          }}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            color: '#dc2626'
+          }}
+          onMouseOver={(e) => e.target.style.background = '#fef2f2'}
+          onMouseOut={(e) => e.target.style.background = 'none'}
+        >
+          🚪 Logout
+        </button>
+      </div>
+    </div>
+  )}
 </div>
 
         {/* Balance Card */}
