@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api, { transactionAPI, transferAPI } from '../api'; 
+import { transferAPI } from '../api';
 import {
   Container,
   Grid,
@@ -18,7 +18,8 @@ import {
   Chip,
   Alert,
   CircularProgress,
-  Divider
+  Divider,
+  TextField
 } from '@mui/material';
 import {
   AccountBalance as BalanceIcon,
@@ -28,52 +29,48 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-
+import hawalaLogo from '../assets/hawalasend-logo.png';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [transactions, setTransactions] = useState([]);
-  const [balance, setBalance] = useState(0.00); // This should come from backend too
+  const [balance, setBalance] = useState(0.00);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [calculatorAmount, setCalculatorAmount] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
-   useEffect(() => {
-  const handleClickOutside = () => setMenuOpen(false);
-  if (menuOpen) {
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }
-}, [menuOpen]);
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.menu-button') && !e.target.closest('.dropdown-menu')) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [menuOpen]);
 
-  console.log('Dashboard mounted with user:', currentUser);
-
-  // Fetch real transactions from backend
   useEffect(() => {
     const fetchTransactions = async () => {
-  try {
-    setLoading(true);
-    const response = await transferAPI.getHistory();
-    
-    // Debug the raw response first
-    console.log('Raw response:', response.data);
-    
-    if (response.data && Array.isArray(response.data.transfers)) {
-      console.log('Transfers array:', response.data.transfers);
-      console.log('First transfer:', response.data.transfers[0]);
-      console.log('Transfer keys:', Object.keys(response.data.transfers[0] || {}));
-      
-      setTransactions(response.data.transfers);
-      console.log(`Loaded ${response.data.transfers.length} real transactions`);
-    }
-  } catch (error) {
-    console.error('Error fetching transactions:', error);
-    setTransactions([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      try {
+        setLoading(true);
+        const response = await transferAPI.getHistory();
+        console.log('Raw response:', response.data);
+        if (response.data && Array.isArray(response.data.transfers)) {
+          setTransactions(response.data.transfers);
+          console.log(`Loaded ${response.data.transfers.length} real transactions`);
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        setTransactions([]);
+        setError('Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    };
 
     if (currentUser) {
       fetchTransactions();
@@ -81,10 +78,11 @@ const Dashboard = () => {
   }, [currentUser]);
 
   const formatCurrency = (amount, currency = 'CAD') => {
-    return new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
+    return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(amount);
+  };
+
+  const formatKES = (amount) => {
+    return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
   };
 
   const formatDate = (dateString) => {
@@ -139,26 +137,138 @@ const Dashboard = () => {
         {/* Header */}
         <div style={{
           marginBottom: '2rem',
-          textAlign: 'center'
+          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: '700',
-            background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            margin: '0 0 0.5rem 0'
-          }}>
-            Welcome to HawalaSend
-          </h1>
-          <p style={{
-            fontSize: '1rem',
-            color: '#737373',
-            margin: '0'
-          }}>
-            Send money to Kenya quickly and securely
-          </p>
+          <img src={hawalaLogo} alt="HawalaSend Logo" style={{ height: '40px', marginRight: '1rem' }} />
+          <div>
+            <h1 style={{
+              fontSize: '2rem',
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: '0 0 0.5rem 0'
+            }}>
+              Welcome to HawalaSend
+            </h1>
+            <p style={{
+              fontSize: '1rem',
+              color: '#737373',
+              margin: '0'
+            }}>
+              Send money to Kenya quickly and securely
+            </p>
+          </div>
+        </div>
+
+        {/* Circular Menu Button - Top Right */}
+        <div style={{
+          position: 'absolute',
+          top: '2rem',
+          right: '2rem',
+          zIndex: 1000
+        }}>
+          <button
+            className="menu-button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="User menu"
+            style={{
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '1.25rem',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
+            }}
+          >
+            {currentUser?.first_name?.[0] || 'U'}
+          </button>
+
+          {menuOpen && (
+            <div className="dropdown-menu" style={{
+              position: 'absolute',
+              top: '60px',
+              right: '0',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #e5e5e5',
+              minWidth: '200px',
+              zIndex: 1001
+            }}>
+              <div style={{ padding: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    navigate('/dashboard');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+                  onMouseOut={(e) => e.target.style.background = 'none'}
+                >
+                  🏠 Dashboard
+                </button>
+                <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5' }} />
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/auth/login');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    color: '#dc2626'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#fef2f2'}
+                  onMouseOut={(e) => e.target.style.background = 'none'}
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -173,148 +283,6 @@ const Dashboard = () => {
             {error}
           </div>
         )}
-
-        {/* Circular Menu Button - Top Right */}
-<div style={{
-  position: 'absolute',
-  top: '2rem',
-  right: '2rem',
-  zIndex: 1000
-}}>
-  <button
-    onClick={() => setMenuOpen(!menuOpen)}
-    style={{
-      width: '50px',
-      height: '50px',
-      borderRadius: '50%',
-      background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontSize: '1.25rem',
-      fontWeight: 'bold',
-      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
-      transition: 'all 0.2s ease'
-    }}
-    onMouseOver={(e) => {
-      e.target.style.transform = 'scale(1.05)';
-      e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
-    }}
-    onMouseOut={(e) => {
-      e.target.style.transform = 'scale(1)';
-      e.target.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
-    }}
-  >
-    {currentUser?.first_name?.[0] || 'U'}
-  </button>
-
-  {/* Dropdown Menu */}
-  {menuOpen && (
-    <div style={{
-      position: 'absolute',
-      top: '60px',
-      right: '0',
-      background: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-      border: '1px solid #e5e5e5',
-      minWidth: '200px',
-      zIndex: 1001
-    }}>
-      <div style={{padding: '0.5rem'}}>
-        <button
-          onClick={() => {
-            navigate('/dashboard');
-            setMenuOpen(false);
-          }}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            background: 'none',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            textAlign: 'left',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}
-          onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-          onMouseOut={(e) => e.target.style.background = 'none'}
-        >
-          🏠 Dashboard
-        </button>
-
-        <button
-      onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('Button clicked! Current menuOpen:', menuOpen);
-      setMenuOpen(!menuOpen);
-  }}
-  style={{
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-    border: 'none',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    fontSize: '1.25rem',
-    fontWeight: 'bold',
-    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
-    transition: 'all 0.2s ease',
-    pointerEvents: 'auto' // Force clickability
-  }}
-  onMouseOver={(e) => {
-    e.target.style.transform = 'scale(1.05)';
-    e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
-  }}
-  onMouseOut={(e) => {
-    e.target.style.transform = 'scale(1)';
-    e.target.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
-  }}
->
-  {currentUser?.first_name?.[0] || 'U'}
-</button>
-        
-        <hr style={{margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5'}} />
-        
-        <button
-          onClick={() => {
-            logout();
-            navigate('/auth/login');
-          }}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            background: 'none',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            textAlign: 'left',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            color: '#dc2626'
-          }}
-          onMouseOver={(e) => e.target.style.background = '#fef2f2'}
-          onMouseOut={(e) => e.target.style.background = 'none'}
-        >
-          🚪 Logout
-        </button>
-      </div>
-    </div>
-  )}
-</div>
 
         {/* Balance Card */}
         <div style={{
@@ -355,20 +323,59 @@ const Dashboard = () => {
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
-                                <Button
-                    variant="contained"
-                    startIcon={<SendIcon />}
-                    fullWidth
-                    size="large"
-                    onClick={() => navigate('/transfer')}
-                    sx={{ py: 2 }}
-                  >
-                    Transfer Funds
-                  </Button>
+              <Button
+                variant="contained"
+                startIcon={<SendIcon />}
+                fullWidth
+                size="large"
+                onClick={() => navigate('/transfer')}
+                sx={{ py: 2 }}
+              >
+                Transfer Funds
+              </Button>
             </div>
           </div>
         </div>
 
+        {/* Transfer Calculator */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '1rem'
+          }}>
+            <TrendingUpIcon style={{ color: '#1976d2' }} />
+            <Typography variant="h6" style={{ color: '#171717' }}>
+              Transfer Calculator
+            </Typography>
+          </div>
+          <TextField
+            fullWidth
+            label="Amount in CAD"
+            type="number"
+            value={calculatorAmount}
+            onChange={(e) => setCalculatorAmount(e.target.value)}
+            style={{ marginBottom: '1rem' }}
+            InputProps={{ inputProps: { min: 0 } }}
+            aria-label="Enter transfer amount in CAD"
+          />
+          <Typography variant="body2" style={{ color: '#737373', marginBottom: '0.5rem' }}>
+            They receive: {formatKES(parseFloat(calculatorAmount || 0) * 110.45)}
+          </Typography>
+          <Typography variant="body2" style={{ color: '#737373', marginBottom: '0.5rem' }}>
+            Fee: {formatCurrency(parseFloat(calculatorAmount || 0) * 0.01 + 4.99)}
+          </Typography>
+          <Typography variant="body2" style={{ color: '#737373' }}>
+            Total: {formatCurrency(parseFloat(calculatorAmount || 0) + (parseFloat(calculatorAmount || 0) * 0.01 + 4.99))}
+          </Typography>
+        </div>
 
         {/* Quick Actions */}
         <div style={{
