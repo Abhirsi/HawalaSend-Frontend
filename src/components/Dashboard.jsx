@@ -164,152 +164,116 @@ const Dashboard = () => {
           </div>
         )}
 
-
-        {/* Transfer Action Cards */}
+        {/* Header with Logout */}
 <div style={{
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '1.5rem',
-  marginBottom: '2rem'
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '2rem',
+  padding: '1rem',
+  background: 'white',
+  borderRadius: '12px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
 }}>
-  <div 
-    onClick={() => navigate('/transfer')}
-    style={{
-      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-      border: '2px solid #1976d2',
-      borderRadius: '16px',
-      padding: '2rem',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      textAlign: 'center',
-      position: 'relative',
-      overflow: 'hidden'
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.transform = 'translateY(-4px)';
-      e.currentTarget.style.boxShadow = '0 10px 25px rgba(25, 118, 210, 0.3)';
-      e.currentTarget.style.borderColor = '#1565c0';
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.transform = 'translateY(0px)';
-      e.currentTarget.style.boxShadow = 'none';
-      e.currentTarget.style.borderColor = '#1976d2';
-    }}
-  >
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '1rem'
-    }}>
-      <img 
-        src="https://flagcdn.com/w40/ca.png" 
-        alt="Canada" 
-        width="40" 
-        height="30" 
-        style={{
-          borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}
-      />
-    </div>
-    <h3 style={{
-      color: '#1976d2',
-      margin: '0 0 0.5rem 0',
-      fontSize: '1.25rem',
-      fontWeight: '700'
-    }}>
-      Send from Canada
-    </h3>
-    <p style={{
-      color: '#737373',
-      margin: '0 0 1rem 0',
-      fontSize: '0.875rem',
-      lineHeight: '1.4'
-    }}>
-      Fast CAD to KES transfers with competitive rates
+  <div>
+    <h2 style={{margin: '0 0 0.25rem 0', color: '#171717'}}>
+      Welcome back, {currentUser?.first_name || 'User'}!
+    </h2>
+    <p style={{margin: '0', color: '#737373', fontSize: '0.875rem'}}>
+      Manage your money transfers
     </p>
-    <div style={{
-      background: 'rgba(25, 118, 210, 0.1)',
-      borderRadius: '8px',
-      padding: '0.5rem',
-      fontSize: '0.75rem',
-      color: '#1976d2',
-      fontWeight: '600'
-    }}>
-      1 CAD = 110.45 KES
-    </div>
   </div>
-
-  <div 
-    onClick={() => navigate('/transfer')}
-    style={{
-      background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-      border: '2px solid #2e7d32',
-      borderRadius: '16px',
-      padding: '2rem',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      textAlign: 'center',
-      position: 'relative',
-      overflow: 'hidden'
-    }}
-    onMouseOver={(e) => {
-      e.currentTarget.style.transform = 'translateY(-4px)';
-      e.currentTarget.style.boxShadow = '0 10px 25px rgba(46, 125, 50, 0.3)';
-      e.currentTarget.style.borderColor = '#1b5e20';
-    }}
-    onMouseOut={(e) => {
-      e.currentTarget.style.transform = 'translateY(0px)';
-      e.currentTarget.style.boxShadow = 'none';
-      e.currentTarget.style.borderColor = '#2e7d32';
-    }}
-  >
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '1rem'
-    }}>
-      <img 
-        src="https://flagcdn.com/w40/ke.png" 
-        alt="Kenya" 
-        width="40" 
-        height="30" 
-        style={{
-          borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}
-      />
-    </div>
-    <h3 style={{
-      color: '#2e7d32',
-      margin: '0 0 0.5rem 0',
-      fontSize: '1.25rem',
-      fontWeight: '700'
-    }}>
-      Receive in Kenya
-    </h3>
-    <p style={{
-      color: '#737373',
-      margin: '0 0 1rem 0',
-      fontSize: '0.875rem',
-      lineHeight: '1.4'
-    }}>
-      Direct to M-Pesa & bank accounts instantly
-    </p>
-    <div style={{
-      background: 'rgba(46, 125, 50, 0.1)',
-      borderRadius: '8px',
-      padding: '0.5rem',
-      fontSize: '0.75rem',
-      color: '#2e7d32',
-      fontWeight: '600'
-    }}>
-      M-Pesa Ready
-    </div>
+  
+  <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+    <button
+      onClick={() => navigate('/profile')}
+      style={{
+        background: 'none',
+        border: '1px solid #e5e5e5',
+        borderRadius: '8px',
+        padding: '0.5rem 1rem',
+        cursor: 'pointer',
+        fontSize: '0.875rem'
+      }}
+    >
+      Settings
+    </button>
+    
+    <button
+      onClick={() => {
+        logout();
+        navigate('/auth/login');
+      }}
+      style={{
+        background: '#dc2626',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        padding: '0.5rem 1rem',
+        cursor: 'pointer',
+        fontSize: '0.875rem',
+        fontWeight: '500'
+      }}
+    >
+      Logout
+    </button>
   </div>
 </div>
+
+        {/* Balance Card */}
+        <div style={{
+          background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+          borderRadius: '16px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          color: 'white',
+          boxShadow: '0 10px 25px rgba(25, 118, 210, 0.3)'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '2rem',
+            alignItems: 'center'
+          }}>
+            <div>
+              <p style={{
+                fontSize: '0.875rem',
+                opacity: 0.9,
+                margin: '0 0 0.5rem 0'
+              }}>
+                Available Balance
+              </p>
+              <h2 style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                margin: '0 0 0.5rem 0'
+              }}>
+                {formatCurrency(balance)}
+              </h2>
+              <p style={{
+                fontSize: '0.875rem',
+                opacity: 0.8,
+                margin: '0'
+              }}>
+                Ready to transfer worldwide
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+                                <Button
+                    variant="contained"
+                    startIcon={<SendIcon />}
+                    fullWidth
+                    size="large"
+                    onClick={() => navigate('/transfer')}
+                    sx={{ py: 2 }}
+                  >
+                    Transfer Funds
+                  </Button>
+            </div>
+          </div>
+        </div>
+
+
         {/* Quick Actions */}
         <div style={{
           display: 'grid',
@@ -587,7 +551,7 @@ const Dashboard = () => {
                       color: '#171717',
                       marginBottom: '0.25rem'
                     }}>
-                      To: {transaction.other_party_email}
+                      To: {transaction.other_party_name || transaction.other_party_email}
                     </div>
                     <div style={{
                       fontSize: '0.75rem',
