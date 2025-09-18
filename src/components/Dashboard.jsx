@@ -272,11 +272,14 @@ const Dashboard = () => {
         >
           👤 Profile
         </button>
+  
         
         <button
-          onClick={() => {
-            navigate('/profile');
-            setMenuOpen(false);
+          onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Button clicked! Current menuOpen:', menuOpen);
+          setMenuOpen(!menuOpen);
           }}
           style={{
             width: '100%',
