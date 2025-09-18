@@ -174,59 +174,55 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Menu Button - Top Left */}
+        {/* Circular Menu Button - Top Right */}
 <div style={{
-  position: 'relative',
-  marginBottom: '2rem'
+  position: 'absolute',
+  top: '2rem',
+  right: '2rem',
+  zIndex: 1000
 }}>
   <button
     onClick={() => setMenuOpen(!menuOpen)}
     style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      padding: '0.75rem 1rem',
-      background: 'white',
-      border: '2px solid #1976d2',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      fontSize: '0.875rem',
-      fontWeight: '600',
-      color: '#1976d2',
-      boxShadow: '0 2px 8px rgba(25, 118, 210, 0.1)'
-    }}
-  >
-    <div style={{
-      width: '32px',
-      height: '32px',
+      width: '50px',
+      height: '50px',
       borderRadius: '50%',
       background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+      border: 'none',
+      cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       color: 'white',
-      fontSize: '0.875rem',
-      fontWeight: 'bold'
-    }}>
-      {currentUser?.first_name?.[0] || 'U'}
-    </div>
-    {currentUser?.first_name || 'Menu'}
-    <span style={{fontSize: '0.75rem'}}>▼</span>
+      fontSize: '1.25rem',
+      fontWeight: 'bold',
+      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+      transition: 'all 0.2s ease'
+    }}
+    onMouseOver={(e) => {
+      e.target.style.transform = 'scale(1.05)';
+      e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
+    }}
+    onMouseOut={(e) => {
+      e.target.style.transform = 'scale(1)';
+      e.target.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
+    }}
+  >
+    {currentUser?.first_name?.[0] || 'U'}
   </button>
 
   {/* Dropdown Menu */}
   {menuOpen && (
     <div style={{
       position: 'absolute',
-      top: '100%',
-      left: '0',
-      marginTop: '0.5rem',
+      top: '60px',
+      right: '0',
       background: 'white',
       borderRadius: '12px',
       boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
       border: '1px solid #e5e5e5',
       minWidth: '200px',
-      zIndex: 1000
+      zIndex: 1001
     }}>
       <div style={{padding: '0.5rem'}}>
         <button
