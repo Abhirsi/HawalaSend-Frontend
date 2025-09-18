@@ -305,6 +305,71 @@ const Dashboard = () => {
           </p>
         </div>
 
+        {/* Logo Header */}
+<div style={{
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '2rem',
+  padding: '1rem',
+  background: 'white',
+  borderRadius: '16px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+}}>
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
+  }}>
+    {/* Logo Icon */}
+    <div style={{
+      width: '48px',
+      height: '48px',
+      background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+      borderRadius: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)'
+    }}>
+      {/* Arrow Symbol */}
+      <div style={{
+        color: 'white',
+        fontSize: '24px',
+        fontWeight: 'bold',
+        transform: 'rotate(45deg)'
+      }}>
+        ➤
+      </div>
+    </div>
+    
+    {/* Brand Name */}
+    <div>
+      <h2 style={{
+        fontSize: '2rem',
+        fontWeight: '700',
+        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        margin: '0',
+        letterSpacing: '-0.02em'
+      }}>
+        HawalaSend
+      </h2>
+      <p style={{
+        fontSize: '0.875rem',
+        color: '#737373',
+        margin: '0',
+        fontWeight: '500'
+      }}>
+        Canada ↔ Kenya Money Transfers
+      </p>
+    </div>
+  </div>
+</div>
+
         {error && (
           <div style={{
             background: '#fef2f2',
