@@ -248,57 +248,42 @@ const Dashboard = () => {
         >
           🏠 Dashboard
         </button>
-        
+
         <button
-          onClick={() => {
-            navigate('/profile');
-            setMenuOpen(false);
-          }}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            background: 'none',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            textAlign: 'left',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}
-          onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-          onMouseOut={(e) => e.target.style.background = 'none'}
-        >
-          👤 Profile
-        </button>
-  
-        
-        <button
-          onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Button clicked! Current menuOpen:', menuOpen);
-          setMenuOpen(!menuOpen);
-          }}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            background: 'none',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            textAlign: 'left',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}
-          onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-          onMouseOut={(e) => e.target.style.background = 'none'}
-        >
-          ⚙️ Settings
-        </button>
+      onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Button clicked! Current menuOpen:', menuOpen);
+      setMenuOpen(!menuOpen);
+  }}
+  style={{
+    width: '50px',
+    height: '50px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '1.25rem',
+    fontWeight: 'bold',
+    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+    transition: 'all 0.2s ease',
+    pointerEvents: 'auto' // Force clickability
+  }}
+  onMouseOver={(e) => {
+    e.target.style.transform = 'scale(1.05)';
+    e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
+  }}
+  onMouseOut={(e) => {
+    e.target.style.transform = 'scale(1)';
+    e.target.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
+  }}
+>
+  {currentUser?.first_name?.[0] || 'U'}
+</button>
         
         <hr style={{margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5'}} />
         
