@@ -61,7 +61,7 @@ const Dashboard = () => {
         console.log('Raw response:', response.data);
         if (response.data && Array.isArray(response.data.transfers)) {
           setTransactions(response.data.transfers);
-          console.log(`Loaded ${response.data.transfers.length} real transactions`);
+          console.log("Loaded " + response.data.transfers.length + " real transactions");
         }
       } catch (error) {
         console.error('Error fetching transactions:', error);
@@ -302,7 +302,7 @@ const Dashboard = () => {
             <div>
               <p style={{
                 fontSize: '0.875rem',
-                opacity: 0.9,
+                opacity: '0.9',
                 margin: '0 0 0.5rem 0'
               }}>
                 Available Balance
@@ -316,7 +316,7 @@ const Dashboard = () => {
               </h2>
               <p style={{
                 fontSize: '0.875rem',
-                opacity: 0.8,
+                opacity: '0.8',
                 margin: '0'
               }}>
                 Ready to transfer worldwide
