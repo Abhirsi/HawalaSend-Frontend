@@ -1,134 +1,17 @@
-// frontend/src/App.js - Only imports existing components
+// frontend/src/App.js - Minimal test version
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 
-// Only import components that actually exist in your project
-import Dashboard from './components/Dashboard';
-import Login from './components/Auth/Login';
-import Register from './components/Auth/Register';
-import Transfer from './pages/Transfer';
-import Transactions from './pages/Transactions';
-import UserProfile from './pages/UserProfile';
-import ForgotPassword from './pages/ForgotPassword';
-
-// Import CSS
-import './App.css';
-
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { currentUser, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  return currentUser ? children : <Navigate to="/auth/login" replace />;
-};
-
-// Public Route Component
-const PublicRoute = ({ children }) => {
-  const { currentUser, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  return currentUser ? <Navigate to="/dashboard" replace /> : children;
-};
+const TestPage = () => <div style={{padding: '2rem'}}>App is working! Router is functional.</div>;
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Routes */}
-          <Route 
-            path="/login" 
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            } 
-          />
-          <Route 
-            path="/auth/login" 
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            } 
-          />
-          <Route 
-            path="/register" 
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            } 
-          />
-          <Route 
-            path="/auth/register" 
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            } 
-          />
-          <Route 
-            path="/forgot-password" 
-            element={
-              <PublicRoute>
-                <ForgotPassword />
-              </PublicRoute>
-            } 
-          />
-
-          {/* Protected Routes */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/transfer" 
-            element={
-              <ProtectedRoute>
-                <Transfer />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/transactions" 
-            element={
-              <ProtectedRoute>
-                <Transactions />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/user-profile" 
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Default Routes */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<TestPage />} />
+          <Route path="*" element={<TestPage />} />
         </Routes>
       </Router>
     </AuthProvider>
