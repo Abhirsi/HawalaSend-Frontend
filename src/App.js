@@ -14,7 +14,7 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import Transfer from './pages/Transfer';
 import Transactions from './pages/Transactions';
-import ProfilePage from './pages/ProfilePage';
+import UserProfile from './pages/UserProfile';
 import ForgotPassword from './pages/ForgotPassword';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -165,7 +165,7 @@ function App() {
                     path="/profile" 
                     element={
                       <ProtectedRoute>
-                        <ProfilePage />
+                        <UserProfile />
                       </ProtectedRoute>
                     } 
                   />
