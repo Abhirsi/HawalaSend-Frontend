@@ -1,3 +1,4 @@
+// frontend/src/api.js - Updated to support HttpOnly cookies while keeping existing functionality
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
@@ -7,12 +8,13 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000, // 15 seconds timeout for better UX
+  withCredentials: true, // ADDED: Include cookies in requests for HttpOnly cookies
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add token to all requests
+// Add token to all requests (keeping existing functionality)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -30,7 +32,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle token expiration and errors
+// Response interceptor to handle token expiration and errors (keeping existing functionality)
 api.interceptors.response.use(
   (response) => {
     // Log successful responses for debugging
@@ -69,7 +71,7 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API
+// Auth API - Enhanced to support HttpOnly cookies while keeping existing functionality
 export const authAPI = {
   login: (email, password) => {
     console.log('🔐 Attempting login for:', email);
@@ -85,22 +87,36 @@ export const authAPI = {
     console.log('🚪 Logging out user');
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
-    return Promise.resolve();
+    // ADDED: Call backend logout to clear HttpOnly cookie (graceful fallback if it fails)
+    return api.post('/auth/logout').catch(error => {
+      console.log('Backend logout failed, but continuing with local logout:', error);
+      return Promise.resolve();
+    });
+  },
+  
+  // ADDED: New methods for HttpOnly cookie support
+  checkAuth: () => {
+    console.log('🔍 Checking authentication status');
+    return api.get('/auth/me');
+  },
+  
+  refreshToken: () => {
+    console.log('🔄 Refreshing authentication token');
+    return api.post('/auth/refresh');
   }
 };
 
-// Update your transferAPI to include getHistory:
+// Transfer API - Keeping all existing functionality
 export const transferAPI = {
   send: (transferData) => {
     console.log('💸 Sending transfer:', transferData.amount, 'to', transferData.recipient_email);
     return api.post('/transfers/send', transferData);
   },
   getHistory: () => api.get('/transfers/history'),
-  // Add this line:
   getBalance: () => api.get('/transfers/balance'),
 };
 
-// Transaction API - Enhanced to match your backend
+// Transaction API - Enhanced to match your backend (keeping all existing functionality)
 export const transactionAPI = {
   // Get all transactions with pagination
   getAll: (params = {}) => {
@@ -137,7 +153,7 @@ export const transactionAPI = {
   }
 };
 
-// User API - Future user profile functionality
+// User API - Future user profile functionality (keeping all existing functionality)
 export const userAPI = {
   getProfile: () => {
     console.log('👤 Fetching user profile');
@@ -160,7 +176,7 @@ export const userAPI = {
   }
 };
 
-// Health and system checks
+// Health and system checks (keeping all existing functionality)
 export const systemAPI = {
   healthCheck: () => {
     console.log('🏥 Performing health check');
@@ -173,9 +189,9 @@ export const systemAPI = {
   }
 };
 
-// Utility functions
+// Utility functions - Enhanced with HttpOnly cookie support while keeping existing functionality
 export const apiUtils = {
-  // Format error messages for user display
+  // Format error messages for user display (keeping existing functionality)
   formatError: (error) => {
     if (error.response?.data?.error) {
       return error.response.data.error;
@@ -188,14 +204,25 @@ export const apiUtils = {
     }
   },
   
-  // Check if user is authenticated
+  // Check if user is authenticated (keeping existing functionality)
   isAuthenticated: () => {
     const token = localStorage.getItem('authToken');
     const user = localStorage.getItem('user');
     return !!(token && user);
   },
   
-  // Get current user from localStorage
+  // ADDED: Async authentication check using HttpOnly cookies
+  isAuthenticatedAsync: async () => {
+    try {
+      await authAPI.checkAuth();
+      return true;
+    } catch (error) {
+      // Fallback to localStorage check
+      return apiUtils.isAuthenticated();
+    }
+  },
+  
+  // Get current user from localStorage (keeping existing functionality)
   getCurrentUser: () => {
     try {
       const user = localStorage.getItem('user');
@@ -206,7 +233,18 @@ export const apiUtils = {
     }
   },
   
-  // Format currency for display
+  // ADDED: Get current user from server (preferred method with HttpOnly cookies)
+  getCurrentUserAsync: async () => {
+    try {
+      const response = await authAPI.checkAuth();
+      return response.data.user;
+    } catch (error) {
+      // Fallback to localStorage
+      return apiUtils.getCurrentUser();
+    }
+  },
+  
+  // Format currency for display (keeping existing functionality)
   formatCurrency: (amount, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -214,7 +252,7 @@ export const apiUtils = {
     }).format(amount);
   },
   
-  // Format date for display
+  // Format date for display (keeping existing functionality)
   formatDate: (dateString, options = {}) => {
     const defaultOptions = {
       year: 'numeric',

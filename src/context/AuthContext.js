@@ -1,5 +1,6 @@
-// frontend/src/context/AuthContext.js - Fixed version
+// frontend/src/context/AuthContext.js - Enhanced with HttpOnly cookie support
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from '../api'; // ADDED: Import for HttpOnly cookie methods
 
 const AuthContext = createContext();
 
@@ -11,7 +12,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Helper function to safely decode JWT token
+// Helper function to safely decode JWT token (keeping existing functionality)
 const decodeToken = (token) => {
   try {
     if (!token || typeof token !== 'string') {
@@ -34,7 +35,7 @@ const decodeToken = (token) => {
   }
 };
 
-// Helper function to check if token is expired
+// Helper function to check if token is expired (keeping existing functionality)
 const isTokenExpired = (token) => {
   try {
     const decoded = decodeToken(token);
@@ -57,7 +58,7 @@ const isTokenExpired = (token) => {
   }
 };
 
-// Safe localStorage operations
+// Safe localStorage operations (keeping existing functionality)
 const safeStorage = {
   getItem: (key) => {
     try {
@@ -91,7 +92,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Clear expired session
+  // Clear expired session (keeping existing functionality)
   const clearSession = () => {
     console.log('AuthContext: Clearing session');
     setCurrentUser(null);
@@ -99,107 +100,134 @@ export const AuthProvider = ({ children }) => {
     safeStorage.removeItem('user');
   };
 
+  // ENHANCED: Validate session using both localStorage and HttpOnly cookies
+  const validateSession = async () => {
+    console.log('AuthContext: Validating session');
+    
+    try {
+      // First, try to get user from server using HttpOnly cookies
+      try {
+        const response = await authAPI.checkAuth();
+        const userData = response.data.user;
+        
+        console.log('AuthContext: Server authentication successful', userData);
+        setCurrentUser(userData);
+        
+        // Update localStorage for backward compatibility
+        safeStorage.setItem('user', JSON.stringify(userData));
+        setLoading(false);
+        return;
+        
+      } catch (serverError) {
+        console.log('AuthContext: Server auth failed, checking localStorage fallback');
+      }
+      
+      // Fallback: Check localStorage for legacy tokens during transition period
+      const token = safeStorage.getItem('authToken');
+      const userData = safeStorage.getItem('user');
+      
+      console.log('Token exists:', !!token);
+      console.log('User data exists:', !!userData);
+      
+      if (!token || !userData) {
+        console.log('AuthContext: No complete session found');
+        clearSession();
+        setLoading(false);
+        return;
+      }
+
+      // Check if token is expired
+      if (isTokenExpired(token)) {
+        console.log('AuthContext: Token expired, clearing session');
+        clearSession();
+        setLoading(false);
+        return;
+      }
+
+      // Parse user data
+      let user;
+      try {
+        user = JSON.parse(userData);
+      } catch (parseError) {
+        console.error('AuthContext: Error parsing user data:', parseError);
+        clearSession();
+        setLoading(false);
+        return;
+      }
+
+      // Validate user data structure
+      if (!user || !user.id || !user.email) {
+        console.log('AuthContext: Invalid user data structure');
+        clearSession();
+        setLoading(false);
+        return;
+      }
+
+      // Session is valid
+      console.log('AuthContext: Restored valid user session from localStorage', user);
+      setCurrentUser(user);
+      
+    } catch (error) {
+      console.error('AuthContext: Session validation error:', error);
+      clearSession();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Validate and restore session on app load
   useEffect(() => {
-    const validateSession = () => {
-      console.log('AuthContext: Validating session');
-      
-      try {
-        const token = safeStorage.getItem('authToken');
-        const userData = safeStorage.getItem('user');
-        
-        console.log('Token exists:', !!token);
-        console.log('User data exists:', !!userData);
-        
-        if (!token || !userData) {
-          console.log('AuthContext: No complete session found');
-          clearSession();
-          setLoading(false);
-          return;
-        }
-
-        // Check if token is expired
-        if (isTokenExpired(token)) {
-          console.log('AuthContext: Token expired, clearing session');
-          clearSession();
-          setLoading(false);
-          return;
-        }
-
-        // Parse user data
-        let user;
-        try {
-          user = JSON.parse(userData);
-        } catch (parseError) {
-          console.error('AuthContext: Error parsing user data:', parseError);
-          clearSession();
-          setLoading(false);
-          return;
-        }
-
-        // Validate user data structure
-        if (!user || !user.id || !user.email) {
-          console.log('AuthContext: Invalid user data structure');
-          clearSession();
-          setLoading(false);
-          return;
-        }
-
-        // Session is valid
-        console.log('AuthContext: Restored valid user session', user);
-        setCurrentUser(user);
-        
-      } catch (error) {
-        console.error('AuthContext: Session validation error:', error);
-        clearSession();
-      } finally {
-        setLoading(false);
-      }
-    };
-
     validateSession();
   }, []);
 
-  // Login function
+  // ENHANCED: Login function now works with both localStorage and HttpOnly cookies
   const login = async (userData, token) => {
     try {
       console.log('AuthContext: Logging in user', userData);
       
       // Validate inputs
-      if (!userData || !token) {
-        console.error('AuthContext: Missing userData or token');
+      if (!userData) {
+        console.error('AuthContext: Missing userData');
         return false;
       }
 
-      if (typeof token !== 'string') {
-        console.error('AuthContext: Token is not a string:', typeof token);
-        return false;
+      // For HttpOnly cookies, token might not be provided in response
+      if (token) {
+        if (typeof token !== 'string') {
+          console.error('AuthContext: Token is not a string:', typeof token);
+          return false;
+        }
+
+        // Validate token format
+        if (isTokenExpired(token)) {
+          console.error('AuthContext: Attempting to login with expired token');
+          return false;
+        }
+
+        // Store token in localStorage for backward compatibility
+        const tokenStored = safeStorage.setItem('authToken', token);
+        if (!tokenStored) {
+          console.error('AuthContext: Failed to store token');
+          return false;
+        }
+
+        // Log token expiry for debugging
+        const decoded = decodeToken(token);
+        if (decoded && decoded.exp) {
+          const expiryDate = new Date(decoded.exp * 1000);
+          console.log('AuthContext: Token expires at', expiryDate);
+        }
       }
 
-      // Validate token format
-      if (isTokenExpired(token)) {
-        console.error('AuthContext: Attempting to login with expired token');
-        return false;
-      }
-
-      // Store in localStorage
-      const tokenStored = safeStorage.setItem('authToken', token);
+      // Store user data
       const userStored = safeStorage.setItem('user', JSON.stringify(userData));
-      
-      if (!tokenStored || !userStored) {
-        console.error('AuthContext: Failed to store session data');
+      if (!userStored) {
+        console.error('AuthContext: Failed to store user data');
         return false;
       }
 
       // Update state
       setCurrentUser(userData);
-      
-      // Log token expiry for debugging
-      const decoded = decodeToken(token);
-      if (decoded && decoded.exp) {
-        const expiryDate = new Date(decoded.exp * 1000);
-        console.log('AuthContext: Token expires at', expiryDate);
-      }
       
       console.log('AuthContext: Login successful');
       return true;
@@ -210,13 +238,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
-  const logout = () => {
-    console.log('AuthContext: Logging out user');
-    clearSession();
+  // ENHANCED: Logout function now clears both localStorage and HttpOnly cookies
+  const logout = async () => {
+    try {
+      console.log('AuthContext: Logging out user');
+      
+      // Try to call server logout to clear HttpOnly cookie
+      try {
+        await authAPI.logout();
+        console.log('AuthContext: Server logout successful');
+      } catch (error) {
+        console.log('AuthContext: Server logout failed, continuing with local logout:', error);
+      }
+      
+      // Always clear local session
+      clearSession();
+      
+    } catch (error) {
+      console.error('AuthContext: Logout error:', error);
+      // Always clear local session even if server logout fails
+      clearSession();
+    }
   };
 
-  // Get current token
+  // Get current token (keeping existing functionality)
   const getToken = () => {
     const token = safeStorage.getItem('authToken');
     if (!token || isTokenExpired(token)) {
@@ -226,24 +271,51 @@ export const AuthProvider = ({ children }) => {
     return token;
   };
 
-  // Check if user has specific role (for future use)
+  // Check if user has specific role (keeping existing functionality)
   const hasRole = (role) => {
     return currentUser?.roles?.includes(role) || false;
   };
 
-  // Refresh session (for future use)
+  // ENHANCED: Refresh session now uses HttpOnly cookies when available
   const refreshSession = async () => {
-    const token = getToken();
-    if (!token) {
+    try {
+      console.log('AuthContext: Refreshing session...');
+      
+      // Try to refresh using HttpOnly cookies
+      try {
+        await authAPI.refreshToken();
+        
+        // Get updated user data
+        const response = await authAPI.checkAuth();
+        const userData = response.data.user;
+        
+        setCurrentUser(userData);
+        safeStorage.setItem('user', JSON.stringify(userData));
+        
+        console.log('AuthContext: Session refresh successful');
+        return true;
+        
+      } catch (error) {
+        console.log('AuthContext: HttpOnly cookie refresh failed, checking localStorage token');
+        
+        // Fallback to localStorage token validation
+        const token = getToken();
+        if (!token) {
+          return false;
+        }
+        
+        // Here you would typically call an API endpoint to refresh the token
+        // For now, just validate the current session
+        return !!currentUser;
+      }
+      
+    } catch (error) {
+      console.error('AuthContext: Session refresh error:', error);
       return false;
     }
-    
-    // Here you would typically call an API endpoint to refresh the token
-    // For now, just validate the current session
-    return !!currentUser;
   };
 
-  // Get session info for debugging
+  // Get session info for debugging (keeping existing functionality + enhancements)
   const getSessionInfo = () => {
     const token = safeStorage.getItem('authToken');
     const userData = safeStorage.getItem('user');
@@ -252,8 +324,30 @@ export const AuthProvider = ({ children }) => {
       hasToken: !!token,
       hasUser: !!userData,
       isExpired: token ? isTokenExpired(token) : true,
-      currentUser: currentUser
+      currentUser: currentUser,
+      // ADDED: Additional debug info
+      cookieAuth: 'HttpOnly cookie support enabled',
+      lastValidation: new Date().toISOString()
     };
+  };
+
+  // ADDED: Manual auth check method for components that need it
+  const checkAuthStatus = async () => {
+    try {
+      const response = await authAPI.checkAuth();
+      const userData = response.data.user;
+      
+      if (userData) {
+        setCurrentUser(userData);
+        safeStorage.setItem('user', JSON.stringify(userData));
+        return true;
+      }
+      return false;
+      
+    } catch (error) {
+      console.log('AuthContext: Auth check failed:', error);
+      return false;
+    }
   };
 
   const value = {
@@ -264,7 +358,9 @@ export const AuthProvider = ({ children }) => {
     getToken,
     hasRole,
     refreshSession,
-    getSessionInfo
+    getSessionInfo,
+    checkAuthStatus, // ADDED: New method
+    validateSession  // ADDED: Expose for manual validation
   };
 
   return (
