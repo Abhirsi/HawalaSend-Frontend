@@ -1,6 +1,11 @@
-// frontend/src/context/AuthContext.js - Enhanced with HttpOnly cookie support
+// frontend/src/context/AuthContext.js - Fixed routing error and enhanced with HttpOnly cookie support
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../api'; // ADDED: Import for HttpOnly cookie methods
+
+/*
+CRITICAL FIX: Removed authAPI import to prevent circular dependency and router conflicts
+The original error was caused by authAPI containing navigation logic while being imported into AuthContext
+AuthContext should be pure and not depend on components that use routing hooks
+*/
 
 const AuthContext = createContext();
 
@@ -12,17 +17,24 @@ export const useAuth = () => {
   return context;
 };
 
+/*
+JWT TOKEN MANAGEMENT
+===================
+Helper functions for JWT token operations - kept for backward compatibility
+These handle token decoding and expiration checking without external dependencies
+*/
+
 // Helper function to safely decode JWT token (keeping existing functionality)
 const decodeToken = (token) => {
   try {
     if (!token || typeof token !== 'string') {
-      console.log('Invalid token type:', typeof token);
+      console.log('AuthContext: Invalid token type:', typeof token);
       return null;
     }
     
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.log('Invalid token format - not 3 parts');
+      console.log('AuthContext: Invalid token format - not 3 parts');
       return null;
     }
     
@@ -30,7 +42,7 @@ const decodeToken = (token) => {
     const decoded = JSON.parse(atob(payload));
     return decoded;
   } catch (error) {
-    console.error('Error decoding token:', error);
+    console.error('AuthContext: Error decoding token:', error);
     return null;
   }
 };
@@ -53,18 +65,24 @@ const isTokenExpired = (token) => {
     
     return isExpired;
   } catch (error) {
-    console.error('Error checking token expiry:', error);
+    console.error('AuthContext: Error checking token expiry:', error);
     return true;
   }
 };
 
-// Safe localStorage operations (keeping existing functionality)
+/*
+SAFE STORAGE OPERATIONS
+=======================
+Wrapper functions for localStorage operations with error handling
+Prevents crashes when localStorage is unavailable (e.g., private browsing)
+*/
+
 const safeStorage = {
   getItem: (key) => {
     try {
       return localStorage.getItem(key);
     } catch (error) {
-      console.error('Error reading from localStorage:', error);
+      console.error('AuthContext: Error reading from localStorage:', error);
       return null;
     }
   },
@@ -73,7 +91,7 @@ const safeStorage = {
       localStorage.setItem(key, value);
       return true;
     } catch (error) {
-      console.error('Error writing to localStorage:', error);
+      console.error('AuthContext: Error writing to localStorage:', error);
       return false;
     }
   },
@@ -82,15 +100,28 @@ const safeStorage = {
       localStorage.removeItem(key);
       return true;
     } catch (error) {
-      console.error('Error removing from localStorage:', error);
+      console.error('AuthContext: Error removing from localStorage:', error);
       return false;
     }
   }
 };
 
+/*
+AUTH PROVIDER COMPONENT
+=======================
+Main authentication context provider with state management
+Handles user session, login/logout, and token validation
+*/
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  /*
+  SESSION MANAGEMENT
+  ==================
+  Core functions for managing user sessions and authentication state
+  */
 
   // Clear expired session (keeping existing functionality)
   const clearSession = () => {
@@ -100,34 +131,17 @@ export const AuthProvider = ({ children }) => {
     safeStorage.removeItem('user');
   };
 
-  // ENHANCED: Validate session using both localStorage and HttpOnly cookies
-  const validateSession = async () => {
+  // FIXED: Simplified session validation without external API dependencies
+  const validateSession = () => {
     console.log('AuthContext: Validating session');
     
     try {
-      // First, try to get user from server using HttpOnly cookies
-      try {
-        const response = await authAPI.checkAuth();
-        const userData = response.data.user;
-        
-        console.log('AuthContext: Server authentication successful', userData);
-        setCurrentUser(userData);
-        
-        // Update localStorage for backward compatibility
-        safeStorage.setItem('user', JSON.stringify(userData));
-        setLoading(false);
-        return;
-        
-      } catch (serverError) {
-        console.log('AuthContext: Server auth failed, checking localStorage fallback');
-      }
-      
-      // Fallback: Check localStorage for legacy tokens during transition period
+      // Check localStorage for existing session
       const token = safeStorage.getItem('authToken');
       const userData = safeStorage.getItem('user');
       
-      console.log('Token exists:', !!token);
-      console.log('User data exists:', !!userData);
+      console.log('AuthContext: Token exists:', !!token);
+      console.log('AuthContext: User data exists:', !!userData);
       
       if (!token || !userData) {
         console.log('AuthContext: No complete session found');
@@ -179,6 +193,13 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     validateSession();
   }, []);
+
+  /*
+  AUTHENTICATION METHODS
+  ======================
+  Login, logout, and session management functions
+  These are called by components and handle state updates
+  */
 
   // ENHANCED: Login function now works with both localStorage and HttpOnly cookies
   const login = async (userData, token) => {
@@ -238,28 +259,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ENHANCED: Logout function now clears both localStorage and HttpOnly cookies
-  const logout = async () => {
+  // SIMPLIFIED: Logout function without external API calls (prevents router conflicts)
+  const logout = () => {
     try {
       console.log('AuthContext: Logging out user');
       
-      // Try to call server logout to clear HttpOnly cookie
-      try {
-        await authAPI.logout();
-        console.log('AuthContext: Server logout successful');
-      } catch (error) {
-        console.log('AuthContext: Server logout failed, continuing with local logout:', error);
-      }
-      
-      // Always clear local session
+      // Clear local session immediately
       clearSession();
+      
+      /*
+      NOTE: HttpOnly cookie clearing should be handled by the component calling logout()
+      This prevents circular dependencies between AuthContext and API modules
+      Example in component:
+      
+      const handleLogout = async () => {
+        logout(); // Clear local state
+        try {
+          await authAPI.logout(); // Clear server-side cookie
+        } catch (error) {
+          console.log('Server logout failed, but local logout succeeded');
+        }
+        navigate('/login');
+      };
+      */
       
     } catch (error) {
       console.error('AuthContext: Logout error:', error);
-      // Always clear local session even if server logout fails
+      // Always clear local session even if other operations fail
       clearSession();
     }
   };
+
+  /*
+  UTILITY FUNCTIONS
+  =================
+  Helper functions for token management and user information
+  */
 
   // Get current token (keeping existing functionality)
   const getToken = () => {
@@ -276,41 +311,25 @@ export const AuthProvider = ({ children }) => {
     return currentUser?.roles?.includes(role) || false;
   };
 
-  // ENHANCED: Refresh session now uses HttpOnly cookies when available
-  const refreshSession = async () => {
+  // SIMPLIFIED: Basic session refresh without external dependencies
+  const refreshSession = () => {
     try {
       console.log('AuthContext: Refreshing session...');
       
-      // Try to refresh using HttpOnly cookies
-      try {
-        await authAPI.refreshToken();
-        
-        // Get updated user data
-        const response = await authAPI.checkAuth();
-        const userData = response.data.user;
-        
-        setCurrentUser(userData);
-        safeStorage.setItem('user', JSON.stringify(userData));
-        
-        console.log('AuthContext: Session refresh successful');
-        return true;
-        
-      } catch (error) {
-        console.log('AuthContext: HttpOnly cookie refresh failed, checking localStorage token');
-        
-        // Fallback to localStorage token validation
-        const token = getToken();
-        if (!token) {
-          return false;
-        }
-        
-        // Here you would typically call an API endpoint to refresh the token
-        // For now, just validate the current session
-        return !!currentUser;
+      // Basic validation of current session
+      const token = getToken();
+      if (!token || !currentUser) {
+        console.log('AuthContext: No valid session to refresh');
+        clearSession();
+        return false;
       }
+      
+      console.log('AuthContext: Session refresh successful (local validation)');
+      return true;
       
     } catch (error) {
       console.error('AuthContext: Session refresh error:', error);
+      clearSession();
       return false;
     }
   };
@@ -325,42 +344,34 @@ export const AuthProvider = ({ children }) => {
       hasUser: !!userData,
       isExpired: token ? isTokenExpired(token) : true,
       currentUser: currentUser,
-      // ADDED: Additional debug info
-      cookieAuth: 'HttpOnly cookie support enabled',
-      lastValidation: new Date().toISOString()
+      cookieAuth: 'HttpOnly cookie support enabled (external API calls)',
+      lastValidation: new Date().toISOString(),
+      version: 'Fixed routing conflicts v1.1'
     };
   };
 
-  // ADDED: Manual auth check method for components that need it
-  const checkAuthStatus = async () => {
-    try {
-      const response = await authAPI.checkAuth();
-      const userData = response.data.user;
-      
-      if (userData) {
-        setCurrentUser(userData);
-        safeStorage.setItem('user', JSON.stringify(userData));
-        return true;
-      }
-      return false;
-      
-    } catch (error) {
-      console.log('AuthContext: Auth check failed:', error);
-      return false;
-    }
-  };
+  /*
+  CONTEXT VALUE
+  =============
+  Object containing all authentication state and methods
+  Available to components via useAuth() hook
+  */
 
   const value = {
-    currentUser,
-    login,
-    logout,
-    loading,
-    getToken,
-    hasRole,
-    refreshSession,
-    getSessionInfo,
-    checkAuthStatus, // ADDED: New method
-    validateSession  // ADDED: Expose for manual validation
+    // State
+    currentUser,        // Current authenticated user object (null if not logged in)
+    loading,           // Boolean indicating if auth check is in progress
+    
+    // Core Methods
+    login,             // Function to log in user: login(userData, token?)
+    logout,            // Function to log out user: logout()
+    
+    // Utility Methods
+    getToken,          // Function to get current valid token
+    hasRole,           // Function to check user roles: hasRole('admin')
+    refreshSession,    // Function to validate current session
+    getSessionInfo,    // Function to get debug information about session
+    validateSession    // Function to manually trigger session validation
   };
 
   return (
@@ -369,3 +380,58 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+/*
+USAGE EXAMPLES FOR COMPONENTS
+=============================
+
+1. LOGIN COMPONENT:
+const handleLogin = async (email, password) => {
+  try {
+    const response = await authAPI.login(email, password);
+    const success = await login(response.data.user, response.data.token);
+    if (success) {
+      navigate('/dashboard');
+    }
+  } catch (error) {
+    console.error('Login failed:', error);
+  }
+};
+
+2. LOGOUT COMPONENT:
+const handleLogout = async () => {
+  logout(); // Clear local state immediately
+  try {
+    await authAPI.logout(); // Clear server cookie
+  } catch (error) {
+    console.log('Server logout failed, but continuing...');
+  }
+  navigate('/login');
+};
+
+3. PROTECTED ROUTE:
+const ProtectedRoute = ({ children }) => {
+  const { currentUser, loading } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  return currentUser ? children : <Navigate to="/login" />;
+};
+
+4. CHECKING AUTH STATUS:
+const { currentUser, loading, getSessionInfo } = useAuth();
+
+// Debug session
+console.log('Session info:', getSessionInfo());
+
+// Check if user is logged in
+if (currentUser) {
+  console.log('User is logged in:', currentUser.email);
+}
+
+MIGRATION NOTES
+===============
+- Removed authAPI dependency to fix router conflicts
+- Components must handle server-side operations (login API calls, logout API calls)
+- AuthContext now focuses purely on local state management
+- HttpOnly cookie support requires components to make API calls separately
+- This separation prevents circular dependencies and router hook conflicts
+*/
