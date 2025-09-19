@@ -1,15 +1,17 @@
-// frontend/src/App.js - Minimal test version
+// frontend/src/App.js - Test Login component only
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import Login from './components/Auth/Login';
 
-const TestPage = () => <div style={{padding: '2rem'}}>App is working! Router is functional.</div>;
+const TestPage = () => <div>Working!</div>;
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/" element={<TestPage />} />
           <Route path="*" element={<TestPage />} />
         </Routes>
