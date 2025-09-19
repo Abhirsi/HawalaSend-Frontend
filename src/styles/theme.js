@@ -1,315 +1,135 @@
-// src/styles/theme.js - Complete Design System for HawalaSend
+// frontend/src/styles/theme.js - Updated with new brand colors
 import { createTheme } from '@mui/material/styles';
 
-// Color Palette - Financial App Optimized
-const colors = {
-  // Primary Colors - Trust & Security
-  primary: {
-    50: '#f0f9ff',
-    100: '#e0f2fe', 
-    200: '#bae6fd',
-    300: '#7dd3fc',
-    400: '#38bdf8',
-    500: '#0ea5e9', // Main brand color
-    600: '#0284c7',
-    700: '#0369a1',
-    800: '#075985',
-    900: '#0c4a6e',
-  },
-  
-  // Secondary Colors - Success & Money
-  secondary: {
-    50: '#f0fdf4',
-    100: '#dcfce7',
-    200: '#bbf7d0',
-    300: '#86efac',
-    400: '#4ade80',
-    500: '#22c55e', // Success/Money color
-    600: '#16a34a',
-    700: '#15803d',
-    800: '#166534',
-    900: '#14532d',
-  },
-  
-  // Neutral Colors - Professional UI
-  neutral: {
-    50: '#fafafa',
-    100: '#f5f5f5',
-    200: '#e5e5e5',
-    300: '#d4d4d4',
-    400: '#a3a3a3',
-    500: '#737373',
-    600: '#525252',
-    700: '#404040',
-    800: '#262626',
-    900: '#171717',
-  },
-  
-  // Status Colors
-  error: {
-    50: '#fef2f2',
-    100: '#fee2e2',
-    200: '#fecaca',
-    300: '#fca5a5',
-    400: '#f87171',
-    500: '#ef4444',
-    600: '#dc2626',
-    700: '#b91c1c',
-    800: '#991b1b',
-    900: '#7f1d1d',
-  },
-  
-  warning: {
-    50: '#fffbeb',
-    100: '#fef3c7',
-    200: '#fde68a',
-    300: '#fcd34d',
-    400: '#fbbf24',
-    500: '#f59e0b',
-    600: '#d97706',
-    700: '#b45309',
-    800: '#92400e',
-    900: '#78350f',
-  },
-  
-  // Background & Surface Colors
-  background: {
-    default: '#fafafa',
-    paper: '#ffffff',
-    elevated: '#f8fafc',
-    overlay: 'rgba(0, 0, 0, 0.05)',
-  }
-};
-
-// Typography Scale
-const typography = {
-  fontFamily: [
-    'Inter',
-    '-apple-system',
-    'BlinkMacSystemFont',
-    'Segoe UI',
-    'Roboto',
-    'sans-serif'
-  ].join(','),
-  
-  // Font Weights
-  fontWeights: {
-    light: 300,
-    regular: 400,
-    medium: 500,
-    semibold: 600,
-    bold: 700,
-  },
-  
-  // Type Scale
-  h1: {
-    fontSize: '2.25rem', // 36px
-    fontWeight: 700,
-    lineHeight: 1.2,
-    letterSpacing: '-0.025em',
-  },
-  h2: {
-    fontSize: '1.875rem', // 30px
-    fontWeight: 600,
-    lineHeight: 1.3,
-    letterSpacing: '-0.025em',
-  },
-  h3: {
-    fontSize: '1.5rem', // 24px
-    fontWeight: 600,
-    lineHeight: 1.4,
-  },
-  h4: {
-    fontSize: '1.25rem', // 20px
-    fontWeight: 600,
-    lineHeight: 1.4,
-  },
-  h5: {
-    fontSize: '1.125rem', // 18px
-    fontWeight: 600,
-    lineHeight: 1.5,
-  },
-  h6: {
-    fontSize: '1rem', // 16px
-    fontWeight: 600,
-    lineHeight: 1.5,
-  },
-  body1: {
-    fontSize: '1rem', // 16px
-    fontWeight: 400,
-    lineHeight: 1.6,
-  },
-  body2: {
-    fontSize: '0.875rem', // 14px
-    fontWeight: 400,
-    lineHeight: 1.5,
-  },
-  subtitle1: {
-    fontSize: '1rem', // 16px
-    fontWeight: 500,
-    lineHeight: 1.5,
-  },
-  subtitle2: {
-    fontSize: '0.875rem', // 14px
-    fontWeight: 500,
-    lineHeight: 1.4,
-  },
-  caption: {
-    fontSize: '0.75rem', // 12px
-    fontWeight: 400,
-    lineHeight: 1.4,
-  },
-  overline: {
-    fontSize: '0.75rem', // 12px
-    fontWeight: 600,
-    lineHeight: 1.4,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-};
-
-// Spacing Scale (8px base)
-const spacing = {
-  xs: '0.25rem',   // 4px
-  sm: '0.5rem',    // 8px
-  md: '1rem',      // 16px
-  lg: '1.5rem',    // 24px
-  xl: '2rem',      // 32px
-  xxl: '3rem',     // 48px
-  xxxl: '4rem',    // 64px
-};
-
-// Border Radius
-const borderRadius = {
-  none: '0',
-  sm: '0.25rem',   // 4px
-  md: '0.5rem',    // 8px
-  lg: '0.75rem',   // 12px
-  xl: '1rem',      // 16px
-  full: '9999px',
-};
-
-// Shadows
-const shadows = {
-  xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-  sm: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
-  md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
-  xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-  xxl: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-};
-
-// Animation & Transitions
-const transitions = {
-  duration: {
-    fast: '150ms',
-    normal: '250ms',
-    slow: '350ms',
-  },
-  easing: {
-    ease: 'cubic-bezier(0.4, 0, 0.2, 1)',
-    easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
-    easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
-    easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  },
-};
-
-// Material-UI Theme Configuration
-const muiTheme = createTheme({
+const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: colors.primary[500],
-      light: colors.primary[400],
-      dark: colors.primary[700],
+      main: '#1976D2', // Primary blue
+      light: '#42A5F5',
+      dark: '#1565C0',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: colors.secondary[500],
-      light: colors.secondary[400],
-      dark: colors.secondary[700],
+      main: '#2E7D32', // Secondary green
+      light: '#4CAF50',
+      dark: '#1B5E20',
       contrastText: '#ffffff',
     },
-    error: {
-      main: colors.error[500],
-      light: colors.error[400],
-      dark: colors.error[700],
+    success: {
+      main: '#2E7D32', // Green for success states
+      light: '#4CAF50',
+      dark: '#1B5E20',
+    },
+    info: {
+      main: '#1976D2', // Blue for info states
+      light: '#42A5F5',
+      dark: '#1565C0',
     },
     warning: {
-      main: colors.warning[500],
-      light: colors.warning[400],
-      dark: colors.warning[700],
+      main: '#FF9800',
+      light: '#FFB74D',
+      dark: '#F57C00',
     },
-    success: {
-      main: colors.secondary[500],
-      light: colors.secondary[400],
-      dark: colors.secondary[700],
+    error: {
+      main: '#F44336',
+      light: '#EF5350',
+      dark: '#D32F2F',
     },
-    grey: colors.neutral,
-    background: colors.background,
+    background: {
+      default: '#f5f5f5',
+      paper: '#ffffff',
+    },
     text: {
-      primary: colors.neutral[900],
-      secondary: colors.neutral[600],
-      disabled: colors.neutral[400],
+      primary: '#333333',
+      secondary: '#666666',
+    },
+    grey: {
+      50: '#fafafa',
+      100: '#f5f5f5',
+      200: '#eeeeee',
+      300: '#e0e0e0',
+      400: '#bdbdbd',
+      500: '#9e9e9e',
+      600: '#757575',
+      700: '#616161',
+      800: '#424242',
+      900: '#212121',
+    }
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontSize: '2.5rem',
+      fontWeight: 600,
+      color: '#333333',
+    },
+    h2: {
+      fontSize: '2rem',
+      fontWeight: 600,
+      color: '#333333',
+    },
+    h3: {
+      fontSize: '1.75rem',
+      fontWeight: 600,
+      color: '#333333',
+    },
+    h4: {
+      fontSize: '1.5rem',
+      fontWeight: 600,
+      color: '#333333',
+    },
+    h5: {
+      fontSize: '1.25rem',
+      fontWeight: 600,
+      color: '#333333',
+    },
+    h6: {
+      fontSize: '1rem',
+      fontWeight: 600,
+      color: '#333333',
+    },
+    body1: {
+      fontSize: '1rem',
+      lineHeight: 1.6,
+    },
+    body2: {
+      fontSize: '0.875rem',
+      lineHeight: 1.5,
+    },
+    button: {
+      textTransform: 'none', // Disable uppercase transformation
+      fontWeight: 500,
     },
   },
-  
-  typography: {
-    fontFamily: typography.fontFamily,
-    h1: typography.h1,
-    h2: typography.h2,
-    h3: typography.h3,
-    h4: typography.h4,
-    h5: typography.h5,
-    h6: typography.h6,
-    body1: typography.body1,
-    body2: typography.body2,
-    subtitle1: typography.subtitle1,
-    subtitle2: typography.subtitle2,
-    caption: typography.caption,
-    overline: typography.overline,
-  },
-  
-  spacing: 8, // 8px base unit
-  
   shape: {
     borderRadius: 8,
   },
-  
-  shadows: [
-    'none',
-    shadows.xs,
-    shadows.sm,
-    shadows.md,
-    shadows.lg,
-    shadows.xl,
-    shadows.xxl,
-    // ... Material-UI expects 25 shadow levels
-    shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl,
-    shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl,
-    shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl,
-    shadows.xxl, shadows.xxl, shadows.xxl, shadows.xxl,
-  ],
-  
   components: {
+    // Customize Material-UI components
     MuiButton: {
       styleOverrides: {
         root: {
+          borderRadius: 8,
+          padding: '10px 24px',
+          fontSize: '0.95rem',
+          fontWeight: 500,
           textTransform: 'none',
-          fontWeight: 600,
-          borderRadius: borderRadius.lg,
-          padding: '12px 24px',
-          fontSize: '1rem',
-          transition: `all ${transitions.duration.normal} ${transitions.easing.ease}`,
-          boxShadow: shadows.sm,
+          boxShadow: 'none',
           '&:hover': {
-            boxShadow: shadows.md,
-            transform: 'translateY(-1px)',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.12)',
           },
         },
-        contained: {
+        containedPrimary: {
+          background: 'linear-gradient(45deg, #1976D2 30%, #42A5F5 90%)',
           '&:hover': {
-            boxShadow: shadows.lg,
+            background: 'linear-gradient(45deg, #1565C0 30%, #1976D2 90%)',
+          },
+        },
+        containedSecondary: {
+          background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
+          '&:hover': {
+            background: 'linear-gradient(45deg, #1B5E20 30%, #2E7D32 90%)',
           },
         },
       },
@@ -317,29 +137,10 @@ const muiTheme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: borderRadius.xl,
-          boxShadow: shadows.sm,
-          border: `1px solid ${colors.neutral[200]}`,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          borderRadius: 12,
           '&:hover': {
-            boxShadow: shadows.md,
-            transform: 'translateY(-2px)',
-            transition: `all ${transitions.duration.normal} ${transitions.easing.ease}`,
-          },
-        },
-      },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-root': {
-            borderRadius: borderRadius.lg,
-            '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: colors.primary[400],
-            },
-            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: colors.primary[500],
-              borderWidth: '2px',
-            },
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
           },
         },
       },
@@ -347,31 +148,130 @@ const muiTheme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: borderRadius.xl,
-          boxShadow: shadows.sm,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         },
         elevation1: {
-          boxShadow: shadows.sm,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         },
         elevation2: {
-          boxShadow: shadows.md,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         },
         elevation3: {
-          boxShadow: shadows.lg,
+          boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 8,
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#1976D2',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#1976D2',
+              borderWidth: 2,
+            },
+          },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 6,
+        },
+        colorPrimary: {
+          backgroundColor: '#1976D2',
+          color: '#ffffff',
+        },
+        colorSecondary: {
+          backgroundColor: '#2E7D32',
+          color: '#ffffff',
+        },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: {
+        standardSuccess: {
+          backgroundColor: '#e8f5e8',
+          color: '#2E7D32',
+          '& .MuiAlert-icon': {
+            color: '#2E7D32',
+          },
+        },
+        standardInfo: {
+          backgroundColor: '#e3f2fd',
+          color: '#1976D2',
+          '& .MuiAlert-icon': {
+            color: '#1976D2',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          background: 'linear-gradient(45deg, #1976D2 30%, #42A5F5 90%)',
+        },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          margin: '4px 8px',
+          '&:hover': {
+            backgroundColor: 'rgba(25, 118, 210, 0.08)',
+          },
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(25, 118, 210, 0.12)',
+            '&:hover': {
+              backgroundColor: 'rgba(25, 118, 210, 0.16)',
+            },
+          },
         },
       },
     },
   },
+  // Custom theme extensions for HawalaSend
+  custom: {
+    // Transfer status colors
+    transferStatus: {
+      pending: '#FF9800',
+      completed: '#2E7D32',
+      failed: '#F44336',
+      cancelled: '#757575',
+    },
+    // Currency colors
+    currency: {
+      cad: '#1976D2',
+      kes: '#2E7D32',
+    },
+    // Feature colors
+    features: {
+      send: '#1976D2',
+      receive: '#2E7D32',
+      track: '#FF9800',
+      secure: '#9C27B0',
+    },
+    // Gradient backgrounds
+    gradients: {
+      primary: 'linear-gradient(45deg, #1976D2 30%, #42A5F5 90%)',
+      secondary: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
+      hero: 'linear-gradient(135deg, #1976D2 0%, #2E7D32 100%)',
+      card: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+    },
+    // Box shadows
+    shadows: {
+      soft: '0 2px 8px rgba(0,0,0,0.1)',
+      medium: '0 4px 16px rgba(0,0,0,0.15)',
+      strong: '0 8px 32px rgba(0,0,0,0.2)',
+      colored: '0 4px 16px rgba(25, 118, 210, 0.3)',
+    },
+  },
 });
 
-// Custom Design Tokens Export
-export const designTokens = {
-  colors,
-  typography,
-  spacing,
-  borderRadius,
-  shadows,
-  transitions,
-};
-
-export default muiTheme;
+export default theme;
