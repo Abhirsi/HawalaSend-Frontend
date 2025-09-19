@@ -317,7 +317,7 @@ const Dashboard = () => {
                 
                 <button
                   onClick={() => {
-                    navigate('/transactions'); // UPDATED: Link to transactions page
+                    navigate('/transfer');
                     setMenuOpen(false);
                   }}
                   style={{
@@ -334,12 +334,12 @@ const Dashboard = () => {
                     gap: '0.75rem'
                   }}
                 >
-                  📊 Transaction History {/* UPDATED: Better menu item */}
+                  💸 Transfer Funds
                 </button>
                 
                 <button
                   onClick={() => {
-                    navigate('/profile');
+                    navigate('/user-profile'); // Fixed: Using your actual UserProfile route
                     setMenuOpen(false);
                   }}
                   style={{
@@ -356,7 +356,7 @@ const Dashboard = () => {
                     gap: '0.75rem'
                   }}
                 >
-                  ⚙️ Settings
+                  👤 Profile
                 </button>
                 
                 <hr style={{margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e5e5'}} />
