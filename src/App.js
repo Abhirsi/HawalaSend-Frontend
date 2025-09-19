@@ -20,7 +20,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Import logo
-import logo from './assets/logo.svg';
+//import logo from './assets/logo.svg';
 import './App.css';
 
 // Protected Route Component
@@ -71,7 +71,7 @@ function App() {
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <img 
-                    src={logo} 
+                    src="/HawaSend-logo.png"
                     alt="HawalaSend Logo" 
                     style={{ 
                       height: '40px', 
@@ -187,7 +187,7 @@ function App() {
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
                   <img 
-                    src={logo} 
+                    src="/HawaSend-logo.png"
                     alt="HawalaSend" 
                     style={{ 
                       height: '24px', 
