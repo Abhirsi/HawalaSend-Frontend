@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authAPI } from '../../api';
 import {
   Container,
   Paper,
@@ -24,24 +23,34 @@ import {
 
 const Login = () => {
   const navigate = useNavigate();
-  const { currentUser, login } = useAuth();
+  const location = useLocation();
+  const { currentUser, login, loading: authLoading } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  console.log('Login component - currentUser:', currentUser);
+  // Handle success message from location state (e.g., from password reset)
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message);
+      // Clear the message from history
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (currentUser) {
-      console.log('User already logged in, redirecting to dashboard');
+    if (currentUser && !authLoading) {
+      console.log('User already authenticated, redirecting to dashboard');
       navigate('/dashboard');
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, authLoading, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,72 +58,68 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
+    
+    // Clear messages when user starts typing
     if (error) setError('');
+    if (success) setSuccess('');
+  };
+
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      setError('Email address is required');
+      return false;
+    }
+    
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    
+    if (!formData.password) {
+      setError('Password is required');
+      return false;
+    }
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+    
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       console.log('Attempting login for:', formData.email);
       
-      const response = await authAPI.login(formData.email, formData.password);
+      const result = await login(formData.email.trim(), formData.password);
       
-      console.log('Login response:', response.data);
-      console.log('Full response structure:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data.token && response.data.user) {
-        const { token, user } = response.data;
+      if (result.success) {
+        console.log('Login successful, user:', result.user?.email);
         
-        console.log('Extracted token:', token);
-        console.log('Extracted user:', user);
-        
-        // CRITICAL: Store token and user in localStorage BEFORE calling AuthContext
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        console.log('Stored in localStorage - Token:', localStorage.getItem('authToken'));
-        console.log('Stored in localStorage - User:', localStorage.getItem('user'));
-        
-        // FIXED: Call login and wait for it to complete
-        try {
-          await login(user, token);
-          console.log('AuthContext login completed successfully');
-          
-          // Navigate to dashboard after successful login
-          console.log('Navigating to dashboard...');
+        // Small delay to ensure state updates
+        setTimeout(() => {
           navigate('/dashboard');
-          
-        } catch (loginError) {
-          console.error('AuthContext login failed:', loginError);
-          setError('Failed to establish session. Please try again.');
-        }
+        }, 100);
         
       } else {
-        console.log('Login missing token or user:', response.data);
-        setError(response.data.message || 'Login failed - missing credentials');
+        console.log('Login failed:', result.error);
+        setError(result.error || 'Login failed. Please try again.');
       }
+      
     } catch (err) {
       console.error('Login error:', err);
-      console.error('Error response:', err.response?.data);
-      
-      if (err.response?.status === 401) {
-        setError('Invalid email or password');
-      } else if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Network error. Please check your connection and try again.');
-      }
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -123,6 +128,27 @@ const Login = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  // Show loading spinner while checking auth status
+  if (authLoading) {
+    return (
+      <Container component="main" maxWidth="sm">
+        <Box
+          sx={{
+            marginTop: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <CircularProgress size={40} />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Checking authentication...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container component="main" maxWidth="sm">
@@ -144,6 +170,14 @@ const Login = () => {
             </Typography>
           </Box>
 
+          {/* Success message (e.g., from password reset) */}
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {success}
+            </Alert>
+          )}
+
+          {/* Error message */}
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
@@ -158,15 +192,17 @@ const Login = () => {
               id="email"
               label="Email Address"
               name="email"
+              type="email"
               autoComplete="email"
               autoFocus
               value={formData.email}
               onChange={handleInputChange}
               disabled={loading}
+              error={!!error && !formData.email}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <EmailIcon />
+                    <EmailIcon color={error && !formData.email ? 'error' : 'action'} />
                   </InputAdornment>
                 ),
               }}
@@ -184,10 +220,11 @@ const Login = () => {
               value={formData.password}
               onChange={handleInputChange}
               disabled={loading}
+              error={!!error && !formData.password}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockIcon />
+                    <LockIcon color={error && !formData.password ? 'error' : 'action'} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -195,7 +232,9 @@ const Login = () => {
                     <IconButton
                       aria-label="toggle password visibility"
                       onClick={togglePasswordVisibility}
+                      onMouseDown={(e) => e.preventDefault()}
                       edge="end"
+                      disabled={loading}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -216,24 +255,43 @@ const Login = () => {
             </Button>
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
-                <Typography variant="body2" color="primary">
-                  Forgot your password?
-                </Typography>
-              </Link>
+              <Button
+                component={Link}
+                to="/forgot-password"
+                variant="text"
+                color="primary"
+                disabled={loading}
+                sx={{ textTransform: 'none' }}
+              >
+                Forgot your password?
+              </Button>
             </Box>
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Typography variant="body2">
+              <Typography variant="body2" color="text.secondary">
                 Don't have an account?{' '}
-                <Link to="/register" style={{ textDecoration: 'none' }}>
-                  <Typography component="span" color="primary">
-                    Sign up here
-                  </Typography>
-                </Link>
+                <Button
+                  component={Link}
+                  to="/register"
+                  variant="text"
+                  color="primary"
+                  disabled={loading}
+                  sx={{ textTransform: 'none', p: 0, minWidth: 'auto' }}
+                >
+                  Sign up here
+                </Button>
               </Typography>
             </Box>
           </Box>
+
+          {/* Development helper */}
+          {process.env.NODE_ENV === 'development' && (
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Development: Use recipientuser@example.com / password123
+              </Typography>
+            </Box>
+          )}
         </Paper>
       </Box>
     </Container>

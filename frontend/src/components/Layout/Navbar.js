@@ -1,6 +1,6 @@
-import React, { useContext } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   AppBar,
   Toolbar,
@@ -17,9 +17,9 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Dashboard, AccountCircle, ExitToApp } from '@mui/icons-material';
 
 const Navbar = () => {
-  const { currentUser, logout } = useContext(AuthContext);
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -44,7 +44,7 @@ const Navbar = () => {
           to="/"
           sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
         >
-          MyApp
+          HawalaSend
         </Typography>
 
         {currentUser ? (

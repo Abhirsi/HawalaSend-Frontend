@@ -28,24 +28,6 @@ const Transfer = () => {
   const feePercentage = 0.01; // 1% fee
   const fixedFee = 4.99; // Fixed fee like PaySii
 
-  useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-
-    // Fetch user balance on mount
-    const fetchBalance = async () => {
-      try {
-        const response = await transferAPI.getBalance();
-        setBalance(response.data.balance || 2500.00); // Fallback to mock balance
-      } catch (error) {
-        console.error('Failed to fetch balance:', error);
-        setBalance(2500.00); // Fallback for production
-      }
-    };
-    fetchBalance();
-  }, [currentUser, navigate]);
 
   const formatCurrency = (amount, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -131,8 +113,6 @@ const Transfer = () => {
         errors.amount = 'Amount must be greater than 0';
       } else if (parseFloat(transferData.amount) > 10000) {
         errors.amount = 'Maximum transfer amount is $10,000';
-      } else if (balance && parseFloat(transferData.amount) > balance) {
-        errors.amount = 'Insufficient funds';
       }
     }
 
@@ -361,6 +341,29 @@ const Transfer = () => {
           </div>
         </div>
       </div>
+
+      <button
+  onClick={() => {
+    setTransferData(prev => ({
+      ...prev,
+      amount: calculateReceiveAmount() / exchangeRate,
+    }));
+  }}
+  style={{
+    margin: '1rem auto',
+    padding: '0.5rem 1rem',
+    background: '#1976d2',
+    color: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  }}
+  onMouseOver={(e) => (e.target.style.background = '#1565c0')}
+  onMouseOut={(e) => (e.target.style.background = '#1976d2')}
+>
+  ↔ Swap
+</button>
 
       <div style={{
         background: '#f8fafc',
@@ -1228,7 +1231,7 @@ const Transfer = () => {
 
       <FloatingChat />
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
