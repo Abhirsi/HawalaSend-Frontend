@@ -129,18 +129,18 @@ export const authAPI = {
 export const transferAPI = {
   send: (transferData) => {
     console.log('💸 Sending transfer:', transferData.amount);
-    return api.post('/transfer/send', transferData);
+    return api.post('/transfers/send', transferData);
   },
   
   getHistory: (params = {}) => {
     console.log('📜 Getting transfer history');
-    return api.get('/transfer/history', { params });
+    return api.get('/transfers/history', { params });
   },
   
   
   calculateFee: (amount, fromCurrency, toCurrency) => {
     console.log(`🧮 Calculating fee for ${amount} ${fromCurrency} to ${toCurrency}`);
-    return api.post('/transfer/calculate-fee', { amount, fromCurrency, toCurrency });
+    return api.post('/transfers/calculate-fee', { amount, fromCurrency, toCurrency });
   }
 };
 
