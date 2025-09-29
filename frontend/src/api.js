@@ -137,10 +137,6 @@ export const transferAPI = {
     return api.get('/transfers/history', { params });
   },
   
-  getBalance: () => {
-    console.log('💰 Getting balance');
-    return api.get('/transfers/balance');
-  },
   
   calculateFee: (amount, fromCurrency, toCurrency) => {
     console.log(`🧮 Calculating fee for ${amount} ${fromCurrency} to ${toCurrency}`);
