@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { transferAPI } from '../api';
 import FloatingChat from '../components/common/FloatingChat';
 
-const Transfer = () => {
+const Transfers = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -1257,4 +1257,4 @@ const Transfer = () => {
   );
 };
 
-export default Transfer;
+export default Transfers;
