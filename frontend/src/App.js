@@ -13,13 +13,14 @@ import Navbar from './components/Layout/Navbar';
 import Dashboard from './components/Dashboard';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
-import Transfer from './pages/Transfer';
+import transfers from './pages/Transfers';
 import Transactions from './pages/Transactions';
 import UserProfile from './pages/UserProfile';
 import Contact from './pages/Contact';
 import ForgotPassword from './pages/ForgotPassword';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSpinner from './components/LoadingSpinner';
+import Transfers from './pages/Transfers';
 
 // Import logo
 const logo = '/HawaSend-logo.png';
@@ -134,7 +135,7 @@ function App() {
                 />
                 <Route 
                   path="/transfer" 
-                  element={<ProtectedRoute><Transfer /></ProtectedRoute>} 
+                  element={<ProtectedRoute><Transfers /></ProtectedRoute>} 
                 />
                 <Route 
                   path="/transactions" 
