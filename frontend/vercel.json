@@ -1,4 +1,8 @@
 {
-  "buildCommand": "npm install --production=false && npm run build",
-  "framework": "create-react-app"
+  "version": 2,
+  "buildCommand": "npm ci && npm run build",
+  "devCommand": "npm start",
+  "installCommand": "npm install",
+  "framework": "create-react-app",
+  "outputDirectory": "build"
 }
