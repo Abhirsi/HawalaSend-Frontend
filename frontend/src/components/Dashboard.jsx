@@ -27,27 +27,26 @@ const Dashboard = () => {
     }
 
     // Fixed: Complete the fetch function
+
     const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        
-        // For now, use mock data to avoid API loop
-        // When ready, uncomment the real API call:
-        // const response = await transferAPI.getHistory();
-        // setTransactions(response.data.transfers || []);
-        
-        // Mock data for demonstration
-        setTransactions([]);
-        
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-        setError('Failed to load recent transfers');
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    setLoading(true);
+    setError('');
+    
+    // Make real API call to get transaction history
+    const response = await transferAPI.getHistory();
+    
+    // Backend returns { transactions: [...], total: X }
+    setTransactions(response.data.transactions || []);
+    
+  } catch (error) {
+    console.error('Failed to fetch transactions:', error);
+    setError('Failed to load transaction history');
+    setTransactions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchDashboardData();
   }, [currentUser, navigate]);
