@@ -15,97 +15,66 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is authenticated on app load
-useEffect(() => {
-  let isMounted = true;
+  // Check authentication status on mount
+  useEffect(() => {
+    let isMounted = true;
 
+    const initializeAuth = async () => {
+      try {
+        setLoading(true);
+        
+        // With httpOnly cookies, just check if the cookie is valid by calling /auth/me
+        const response = await authAPI.getCurrentUser();
+        
+        if (isMounted && response.data?.user) {
+          setCurrentUser(response.data.user);
+          console.log('User authenticated:', response.data.user.email);
+        } else if (isMounted) {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          // 401 means not authenticated, which is fine on initial load
+          if (error.response?.status !== 401) {
+            console.error('Auth check error:', error.response?.status || 'Network error');
+          }
+          setCurrentUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-  // In AuthContext.js, update the initializeAuth function
-const initializeAuth = async () => {
-  try {
-    setLoading(true);
+    initializeAuth();
     
-    // Check if there's a stored token first
-    const storedToken = localStorage.getItem('authToken');
-    if (!storedToken) {
-      console.log('No stored token found - user not logged in');
-      setCurrentUser(null);
-      return;
-    }
-    
-    // Only call /auth/me if we have a token
-    const response = await authAPI.getCurrentUser();
-    
-    if (isMounted && response.data && response.data.user) {
-      setCurrentUser(response.data.user);
-      console.log('User authenticated:', response.data.user.email);
-    } else if (isMounted) {
-      setCurrentUser(null);
-      // Clear invalid token
-      localStorage.removeItem('authToken');
-    }
-  } catch (error) {
-    if (isMounted) {
-      console.log('User not authenticated:', error.response?.status || 'Network error');
-      setCurrentUser(null);
-      // Clear invalid token on auth failure
-      localStorage.removeItem('authToken');
-    }
-  } finally {
-    if (isMounted) {
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const login = async (email, password) => {
+    try {
+      setLoading(true);
+      const response = await authAPI.login(email, password);
+      
+      // Token is in httpOnly cookie, only user data in response
+      if (response.data?.user) {
+        setCurrentUser(response.data.user);
+        console.log('Login successful:', response.data.user.email);
+        return { success: true, user: response.data.user };
+      }
+      
+      return { success: false, error: 'Login failed - no user data received' };
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
+      return { success: false, error: errorMessage };
+    } finally {
       setLoading(false);
     }
-  }
-};
-
-  initializeAuth();
-  
-  return () => {
-    isMounted = false;
   };
-}, []); // Critical: empty dependency array
-
-// Remove the separate checkAuthStatus function or make it not auto-call
-const checkAuthStatus = async () => {
-  try {
-    setLoading(true);
-    const response = await authAPI.getCurrentUser();
-    
-    if (response.data && response.data.user) {
-      setCurrentUser(response.data.user);
-      console.log('User authenticated:', response.data.user.email);
-    } else {
-      setCurrentUser(null);
-    }
-  } catch (error) {
-    console.log('User not authenticated');
-    setCurrentUser(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
-// In your login function (AuthContext.js)
-const login = async (email, password) => {
-  try {
-    setLoading(true);
-    const response = await authAPI.login(email, password);
-    
-    if (response.data.token && response.data.user) {
-      // Store the token
-      localStorage.setItem('authToken', response.data.token);
-      setCurrentUser(response.data.user);
-      return { success: true, user: response.data.user };
-    }
-    
-    return { success: false, error: 'Login failed - no token received' };
-  } catch (error) {
-    console.error('Login error:', error);
-    return { success: false, error: error.response?.data?.error || 'Login failed' };
-  } finally {
-    setLoading(false);
-  }
-};
 
   const logout = async () => {
     try {
@@ -116,9 +85,9 @@ const login = async (email, password) => {
       return { success: true };
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails on backend, clear local state
+      // Clear local state even if backend fails
       setCurrentUser(null);
-      return { success: true }; // Return success anyway to clear UI
+      return { success: true };
     } finally {
       setLoading(false);
     }
@@ -129,13 +98,14 @@ const login = async (email, password) => {
       setLoading(true);
       const response = await authAPI.register(userData);
       
-      if (response.data && response.data.user) {
+      // Token is in httpOnly cookie, only user data in response
+      if (response.data?.user) {
         setCurrentUser(response.data.user);
         console.log('Registration successful:', response.data.user.email);
         return { success: true, user: response.data.user };
       }
       
-      return { success: false, error: 'Registration failed' };
+      return { success: false, error: 'Registration failed - no user data received' };
     } catch (error) {
       console.error('Registration error:', error);
       const errorMessage = error.response?.data?.error || 'Registration failed. Please try again.';
@@ -146,7 +116,24 @@ const login = async (email, password) => {
   };
 
   const refreshAuth = async () => {
-    return await checkAuthStatus();
+    try {
+      setLoading(true);
+      const response = await authAPI.getCurrentUser();
+      
+      if (response.data?.user) {
+        setCurrentUser(response.data.user);
+        return { success: true, user: response.data.user };
+      } else {
+        setCurrentUser(null);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Refresh auth error:', error);
+      setCurrentUser(null);
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value = {
