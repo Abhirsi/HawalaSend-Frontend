@@ -11,15 +11,18 @@ const Transfers = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [balance, setBalance] = useState(null); // Added for balance fetching
   const [transferData, setTransferData] = useState({
+    recipientName: '',
     recipientEmail: '',
+    recipientPhone: '',
     amount: '',
     description: '',
-    paymentMethod: '',
+    paymentMethod: 'card',
     cardNumber: '',
     expiryDate: '',
     cvv: '',
     pin: ''
   });
+
   const [validationErrors, setValidationErrors] = useState({});
   const [transferResult, setTransferResult] = useState(null);
 
@@ -163,14 +166,17 @@ const Transfers = () => {
     setLoading(true);
 
     try {
+
       const response = await transferAPI.send({
-        recipient_email: transferData.recipientEmail,
+        recipientName: transferData.recipientName || 'Unknown', // Add this field to your form
+        recipientEmail: transferData.recipientEmail,
+        recipientPhone: transferData.recipientPhone || '', // Add this field to your form
         amount: parseFloat(transferData.amount),
-        description: transferData.description || 'Money transfer',
-        payment_method: transferData.paymentMethod,
-        card_number: transferData.paymentMethod === 'card' ? transferData.cardNumber : undefined,
-        pin: transferData.pin
-      });
+        fromCurrency: 'CAD',
+        toCurrency: 'KES',
+        paymentMethod: transferData.paymentMethod || 'card',
+        notes: transferData.description || ''
+    });
 
       if (response.data.success) {
         setTransferResult({
@@ -192,16 +198,21 @@ const Transfers = () => {
   };
 
   const handleNewTransfer = () => {
-    setTransferData({
-      recipientEmail: '',
-      amount: '',
-      description: '',
-      paymentMethod: '',
-      cardNumber: '',
-      expiryDate: '',
-      cvv: '',
-      pin: ''
-    });
+
+  const [transferData, setTransferData] = useState({
+  recipientName: '',      // Add this
+  recipientEmail: '',
+  recipientPhone: '',     // Add this
+  amount: '',
+  description: '',
+  paymentMethod: 'card',
+  cardNumber: '',
+  expiryDate: '',
+  cvv: '',
+  pin: ''
+});
+
+
     setValidationErrors({});
     setTransferResult(null);
     setCurrentStep(1);
