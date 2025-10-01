@@ -105,6 +105,12 @@ const Transfers = () => {
     }
   };
 
+  const handleCurrencyChange = (e) => {
+    const newCurrency = e.target.value;
+    setSelectedCurrency(newCurrency);
+    calculateReceiveAmount(); // Recalculate on change
+  };
+
   const validateStep = (step) => {
     const errors = {};
 
@@ -174,17 +180,17 @@ const Transfers = () => {
 
     try {
       const response = await transferAPI.send({
-        recipientName: transferData.recipientName || 'Unknown', // Add this field to your form
+        recipientName: transferData.recipientName || 'Unknown',
         recipientEmail: transferData.recipientEmail,
-        recipientPhone: transferData.recipientPhone || '', // Add this field to your form
+        recipientPhone: transferData.recipientPhone || '',
         amount: parseFloat(transferData.amount),
-        fromCurrency: selectedCurrency, // Use the selected currency
+        fromCurrency: selectedCurrency,
         toCurrency: 'KES',
         paymentMethod: transferData.paymentMethod || 'card',
         notes: transferData.description || ''
       });
 
-      if (response.data.transaction) {  // Check for transaction instead of success
+      if (response.data.transaction) {
         setTransferResult({
           success: true,
           transaction: response.data.transaction
@@ -196,7 +202,7 @@ const Transfers = () => {
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Transfer failed. Please try again.';
       setValidationErrors({ general: errorMessage });
-      console.error('Transfer error:', error); // Improved logging
+      console.error('Transfer error:', error);
     } finally {
       setLoading(false);
     }
@@ -362,6 +368,7 @@ const Transfers = () => {
             ...prev,
             amount: calculateReceiveAmount() / rate,
           }));
+          setSelectedCurrency(selectedCurrency === 'CAD' ? 'USD' : 'CAD'); // Flip currency
         }}
         style={{
           margin: '1rem auto',
