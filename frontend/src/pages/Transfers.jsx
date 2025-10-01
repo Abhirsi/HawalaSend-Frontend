@@ -178,16 +178,16 @@ const Transfers = () => {
         notes: transferData.description || ''
     });
 
-      if (response.data.success) {
-        setTransferResult({
-          success: true,
-          transaction: response.data.transaction,
-          newBalance: response.data.newBalance
-        });
-        setCurrentStep(4);
-      } else {
-        setValidationErrors({ general: response.data.error || 'Transfer failed' });
-      }
+if (response.data.transaction) {  // Check for transaction instead of success
+  setTransferResult({
+    success: true,
+    transaction: response.data.transaction
+  });
+  setCurrentStep(4);
+} else {
+  setValidationErrors({ general: response.data.error || 'Transfer failed' });
+}
+
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Transfer failed. Please try again.';
       setValidationErrors({ general: errorMessage });
