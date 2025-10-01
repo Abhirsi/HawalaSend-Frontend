@@ -669,7 +669,7 @@ const renderStep2 = () => (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#737373', fontSize: '0.875rem' }}>Payment Method:</span>
             <span style={{ fontWeight: '600', color: '#171717' }}>
-              {transferData.paymentMethod === 'interac' ? 'Interac e-Transfer' : 
+              {
                transferData.paymentMethod === 'card' ? `Card ending in ${transferData.cardNumber.slice(-4)}` : ''}
             </span>
           </div>
@@ -835,7 +835,7 @@ const renderStep2 = () => (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#737373', fontSize: '0.875rem' }}>Payment Method:</span>
             <span style={{ fontWeight: '600', color: '#171717' }}>
-              {transferData.paymentMethod === 'interac' ? 'Interac e-Transfer' : 
+              {
                transferData.paymentMethod === 'card' ? `Card ending in ${transferData.cardNumber.slice(-4)}` : ''}
             </span>
           </div>
