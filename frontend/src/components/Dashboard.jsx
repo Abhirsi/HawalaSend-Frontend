@@ -344,7 +344,7 @@ const Dashboard = () => {
           )}
 
           <button
-            onClick={() => navigate('/transfers')}
+            onClick={() => navigate('/transfer')}
             style={{
               width: '100%',
               padding: '14px',
