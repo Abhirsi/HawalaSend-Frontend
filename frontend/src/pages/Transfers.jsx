@@ -31,6 +31,12 @@ const Transfers = () => {
   const feePercentage = 0.01; // 1% fee
   const fixedFee = 4.99; // Fixed fee like PaySii
 
+  // Currency dropdown options and rates
+  const currencyOptions = [
+    { value: 'CAD', label: 'Canadian Dollar (CAD)', rateToKES: 110.45 },
+    { value: 'USD', label: 'US Dollar (USD)', rateToKES: 150.25 }
+  ];
+  const [selectedCurrency, setSelectedCurrency] = useState('CAD');
 
   const formatCurrency = (amount, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -48,7 +54,8 @@ const Transfers = () => {
 
   const calculateReceiveAmount = () => {
     const amount = parseFloat(transferData.amount) || 0;
-    return (amount * exchangeRate).toFixed(2);
+    const rate = currencyOptions.find(opt => opt.value === selectedCurrency)?.rateToKES || exchangeRate;
+    return (amount * rate).toFixed(2);
   };
 
   const calculateFee = () => {
@@ -166,28 +173,26 @@ const Transfers = () => {
     setLoading(true);
 
     try {
-
       const response = await transferAPI.send({
         recipientName: transferData.recipientName || 'Unknown', // Add this field to your form
         recipientEmail: transferData.recipientEmail,
         recipientPhone: transferData.recipientPhone || '', // Add this field to your form
         amount: parseFloat(transferData.amount),
-        fromCurrency: 'CAD',
+        fromCurrency: selectedCurrency, // Use the selected currency
         toCurrency: 'KES',
         paymentMethod: transferData.paymentMethod || 'card',
         notes: transferData.description || ''
-    });
+      });
 
-if (response.data.transaction) {  // Check for transaction instead of success
-  setTransferResult({
-    success: true,
-    transaction: response.data.transaction
-  });
-  setCurrentStep(4);
-} else {
-  setValidationErrors({ general: response.data.error || 'Transfer failed' });
-}
-
+      if (response.data.transaction) {  // Check for transaction instead of success
+        setTransferResult({
+          success: true,
+          transaction: response.data.transaction
+        });
+        setCurrentStep(4);
+      } else {
+        setValidationErrors({ general: response.data.error || 'Transfer failed' });
+      }
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Transfer failed. Please try again.';
       setValidationErrors({ general: errorMessage });
@@ -198,21 +203,18 @@ if (response.data.transaction) {  // Check for transaction instead of success
   };
 
   const handleNewTransfer = () => {
-
-  const [transferData, setTransferData] = useState({
-  recipientName: '',      // Add this
-  recipientEmail: '',
-  recipientPhone: '',     // Add this
-  amount: '',
-  description: '',
-  paymentMethod: 'card',
-  cardNumber: '',
-  expiryDate: '',
-  cvv: '',
-  pin: ''
-});
-
-
+    setTransferData({
+      recipientName: '',
+      recipientEmail: '',
+      recipientPhone: '',
+      amount: '',
+      description: '',
+      paymentMethod: 'card',
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+      pin: ''
+    });
     setValidationErrors({});
     setTransferResult(null);
     setCurrentStep(1);
@@ -296,7 +298,7 @@ if (response.data.transaction) {  // Check for transaction instead of success
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <img src="https://flagcdn.com/w40/ca.png" alt="Canada" width="24" height="18" />
-            <span style={{ fontWeight: '600', color: '#1976d2' }}>You Send (CAD)</span>
+            <span style={{ fontWeight: '600', color: '#1976d2' }}>You Send ({selectedCurrency})</span>
           </div>
           <div style={{ position: 'relative' }}>
             <span style={{
@@ -308,7 +310,7 @@ if (response.data.transaction) {  // Check for transaction instead of success
               fontSize: '2rem',
               fontWeight: '700'
             }}>
-              $
+              {selectedCurrency === 'CAD' ? '$' : '$'}
             </span>
             <input
               type="text"
@@ -354,27 +356,28 @@ if (response.data.transaction) {  // Check for transaction instead of success
       </div>
 
       <button
-  onClick={() => {
-    setTransferData(prev => ({
-      ...prev,
-      amount: calculateReceiveAmount() / exchangeRate,
-    }));
-  }}
-  style={{
-    margin: '1rem auto',
-    padding: '0.5rem 1rem',
-    background: '#1976d2',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  }}
-  onMouseOver={(e) => (e.target.style.background = '#1565c0')}
-  onMouseOut={(e) => (e.target.style.background = '#1976d2')}
->
-  ↔ Swap
-</button>
+        onClick={() => {
+          const rate = currencyOptions.find(opt => opt.value === selectedCurrency)?.rateToKES || exchangeRate;
+          setTransferData(prev => ({
+            ...prev,
+            amount: calculateReceiveAmount() / rate,
+          }));
+        }}
+        style={{
+          margin: '1rem auto',
+          padding: '0.5rem 1rem',
+          background: '#1976d2',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseOver={(e) => (e.target.style.background = '#1565c0')}
+        onMouseOut={(e) => (e.target.style.background = '#1976d2')}
+      >
+        ↔ Swap
+      </button>
 
       <div style={{
         background: '#f8fafc',
@@ -385,7 +388,7 @@ if (response.data.transaction) {  // Check for transaction instead of success
         textAlign: 'center'
       }}>
         <div style={{ color: '#737373', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-          Exchange Rate: 1 CAD = {exchangeRate} KES
+          Exchange Rate: 1 {selectedCurrency} = {currencyOptions.find(opt => opt.value === selectedCurrency)?.rateToKES} KES
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#737373' }}>
           <span>Fee: {formatCurrency(calculateFee())}</span>
@@ -480,152 +483,152 @@ if (response.data.transaction) {  // Check for transaction instead of success
     </div>
   );
 
-const renderStep2 = () => (
-  <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-    <h2 style={{
-      fontSize: '1.5rem',
-      fontWeight: '700',
-      background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-      backgroundClip: 'text',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      marginBottom: '1.5rem',
-      textAlign: 'center'
-    }}>
-      Payment Information
-    </h2>
+  const renderStep2 = () => (
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+      <h2 style={{
+        fontSize: '1.5rem',
+        fontWeight: '700',
+        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        marginBottom: '1.5rem',
+        textAlign: 'center'
+      }}>
+        Payment Information
+      </h2>
 
-    <div style={{ 
-      background: '#f8fafc', 
-      border: '1px solid #e5e5e5', 
-      borderRadius: '12px', 
-      padding: '1.5rem'
-    }}>
-      <h3 style={{ margin: '0 0 1rem 0', fontWeight: '600', color: '#171717' }}>
-        Card Information
-      </h3>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
+      <div style={{ 
+        background: '#f8fafc', 
+        border: '1px solid #e5e5e5', 
+        borderRadius: '12px', 
+        padding: '1.5rem'
+      }}>
+        <h3 style={{ margin: '0 0 1rem 0', fontWeight: '600', color: '#171717' }}>
+          Card Information
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '0.5rem'
+            }}>
+              Card Number
+            </label>
+            <input
+              type="text"
+              name="cardNumber"
+              value={transferData.cardNumber}
+              onChange={handleInputChange}
+              placeholder="1234 5678 9012 3456"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                border: `2px solid ${validationErrors.cardNumber ? '#ef4444' : '#e5e5e5'}`,
+                borderRadius: '8px',
+                fontSize: '1rem',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            {validationErrors.cardNumber && (
+              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                {validationErrors.cardNumber}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                Expiry Date
+              </label>
+              <input
+                type="text"
+                name="expiryDate"
+                value={transferData.expiryDate}
+                onChange={handleInputChange}
+                placeholder="MM/YY"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  border: `2px solid ${validationErrors.expiryDate ? '#ef4444' : '#e5e5e5'}`,
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {validationErrors.expiryDate && (
+                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.expiryDate}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                CVV
+              </label>
+              <input
+                type="text"
+                name="cvv"
+                value={transferData.cvv}
+                onChange={handleInputChange}
+                placeholder="123"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  border: `2px solid ${validationErrors.cvv ? '#ef4444' : '#e5e5e5'}`,
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {validationErrors.cvv && (
+                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.cvv}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div style={{
+            background: '#f0f9ff',
+            border: '1px solid #1976d2',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginTop: '0.5rem'
           }}>
-            Card Number
-          </label>
-          <input
-            type="text"
-            name="cardNumber"
-            value={transferData.cardNumber}
-            onChange={handleInputChange}
-            placeholder="1234 5678 9012 3456"
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: `2px solid ${validationErrors.cardNumber ? '#ef4444' : '#e5e5e5'}`,
-              borderRadius: '8px',
-              fontSize: '1rem',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-          />
-          {validationErrors.cardNumber && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.cardNumber}
+            <span style={{ fontSize: '1.25rem' }}>🔒</span>
+            <span style={{ fontSize: '0.875rem', color: '#1976d2' }}>
+              Your payment information is encrypted and secure
             </span>
-          )}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              color: '#374151',
-              marginBottom: '0.5rem'
-            }}>
-              Expiry Date
-            </label>
-            <input
-              type="text"
-              name="expiryDate"
-              value={transferData.expiryDate}
-              onChange={handleInputChange}
-              placeholder="MM/YY"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                border: `2px solid ${validationErrors.expiryDate ? '#ef4444' : '#e5e5e5'}`,
-                borderRadius: '8px',
-                fontSize: '1rem',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-            {validationErrors.expiryDate && (
-              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                {validationErrors.expiryDate}
-              </span>
-            )}
           </div>
-
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              color: '#374151',
-              marginBottom: '0.5rem'
-            }}>
-              CVV
-            </label>
-            <input
-              type="text"
-              name="cvv"
-              value={transferData.cvv}
-              onChange={handleInputChange}
-              placeholder="123"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                border: `2px solid ${validationErrors.cvv ? '#ef4444' : '#e5e5e5'}`,
-                borderRadius: '8px',
-                fontSize: '1rem',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-            {validationErrors.cvv && (
-              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                {validationErrors.cvv}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div style={{
-          background: '#f0f9ff',
-          border: '1px solid #1976d2',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginTop: '0.5rem'
-        }}>
-          <span style={{ fontSize: '1.25rem' }}>🔒</span>
-          <span style={{ fontSize: '0.875rem', color: '#1976d2' }}>
-            Your payment information is encrypted and secure
-          </span>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 
   const renderStep3 = () => (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
