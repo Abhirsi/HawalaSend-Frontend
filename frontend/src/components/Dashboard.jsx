@@ -1,327 +1,274 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { transferAPI } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard = () => {
-  const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
-  
-  // Calculator state - CAD to KES only
+  const navigate = useNavigate();
+
   const [sendAmount, setSendAmount] = useState('');
-  const [receiveAmount, setReceiveAmount] = useState('');
-  const CAD_TO_KES_RATE = 96.50; // Your current rate
-  const TRANSFER_FEE_PERCENT = 0.025; // 2.5%
-  const FLAT_FEE = 2.00; // $2 CAD
+  const [currency, setCurrency] = useState('CAD');
+  const [transactions, setTransactions] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [error, setError] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const exchangeRates = {
+    CAD: 130,
+    USD: 150
+  };
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-
-    fetchTransactions();
-  }, [currentUser, navigate]);
-
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const response = await transferAPI.getHistory();
-      console.log('Transaction API response:', response.data); // Debug log
-      
-      const txData = response.data.transactions || [];
-      setTransactions(txData);
-      
-      if (txData.length === 0) {
-        console.log('No transactions found for this user');
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch('/transactions');
+        if (!response.ok) throw new Error('Failed to fetch transactions');
+        const data = await response.json();
+        setTransactions(data || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoadingTransactions(false);
       }
-      
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error);
-      setError('Unable to load transaction history');
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
+    };
+    fetchTransactions();
+  }, []);
+
+  const calculateFee = (amount) => {
+    if (!amount || amount <= 0) return 0;
+    if (transactions.length < 5) return 0; // promo: free first 5 transfers
+    return Math.min(amount * 0.005, 1.0); // 0.5% fee, max $1
   };
 
-  // Calculate receive amount when send amount changes
-  useEffect(() => {
-    if (sendAmount && !isNaN(sendAmount)) {
-      const amount = parseFloat(sendAmount);
-      const fee = (amount * TRANSFER_FEE_PERCENT) + FLAT_FEE;
-      const total = amount + fee;
-      const kesAmount = amount * CAD_TO_KES_RATE;
-      
-      setReceiveAmount(kesAmount.toFixed(2));
-    } else {
-      setReceiveAmount('');
-    }
-  }, [sendAmount]);
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const calculateReceiveAmount = () => {
+    if (!sendAmount || isNaN(sendAmount)) return 0;
+    const fee = calculateFee(Number(sendAmount));
+    const netAmount = Number(sendAmount) - fee;
+    return netAmount * exchangeRates[currency];
   };
 
-  const formatCurrency = (amount, currency) => {
-    const num = parseFloat(amount) || 0;
-    if (currency === 'KES') {
-      return `KSh ${num.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    return `$${num.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'completed': return '#10b981';
-      case 'pending': return '#f59e0b';
-      case 'failed': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
-
-  const getStatusText = (status) => {
-    return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+  const handleSend = () => {
+    navigate('/transfers');
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', paddingTop: '80px' }}>
-      {/* Welcome Section */}
-      <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        padding: '0 20px 40px',
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '1rem 2rem',
+        backgroundColor: 'white',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
       }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '16px',
-          padding: '40px',
-          color: 'white',
-          marginBottom: '40px',
-          boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
-        }}>
-          <h1 style={{ margin: '0 0 10px 0', fontSize: '2rem' }}>
-            Welcome back, {currentUser?.username || currentUser?.email}!
-          </h1>
-          <p style={{ margin: 0, opacity: 0.9 }}>
-            Send money from Canada to Kenya instantly with low fees
-          </p>
-        </div>
-
-        {/* Transfer Calculator */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '30px',
-          marginBottom: '40px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0', fontSize: '1.5rem' }}>Transfer Calculator</h2>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                You Send
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  value={sendAmount}
-                  onChange={(e) => setSendAmount(e.target.value)}
-                  placeholder="0.00"
-                  style={{
-                    width: '100%',
-                    padding: '12px 60px 12px 12px',
-                    fontSize: '1.1rem',
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  fontWeight: '600',
-                  color: '#64748b'
-                }}>CAD</span>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                Recipient Gets
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={receiveAmount}
-                  readOnly
-                  placeholder="0.00"
-                  style={{
-                    width: '100%',
-                    padding: '12px 60px 12px 12px',
-                    fontSize: '1.1rem',
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px',
-                    backgroundColor: '#f8fafc',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  fontWeight: '600',
-                  color: '#64748b'
-                }}>KES</span>
-              </div>
-            </div>
-          </div>
-
-          {sendAmount && (
+        <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1e293b' }}>HawalaSend</h1>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
+            <img src="/avatar.png" alt="User" style={{ width: 40, borderRadius: '50%' }} />
+          </button>
+          {menuOpen && (
             <div style={{
-              backgroundColor: '#f1f5f9',
-              padding: '15px',
-              borderRadius: '8px',
-              marginBottom: '20px'
+              position: 'absolute',
+              right: 0,
+              top: '100%',
+              marginTop: '0.5rem',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              padding: '0.75rem',
+              zIndex: 20
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Transfer Amount:</span>
-                <span style={{ fontWeight: '600' }}>{formatCurrency(sendAmount, 'CAD')}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Fee (2.5% + $2):</span>
-                <span style={{ fontWeight: '600' }}>
-                  {formatCurrency((parseFloat(sendAmount) * TRANSFER_FEE_PERCENT) + FLAT_FEE, 'CAD')}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #cbd5e1' }}>
-                <span style={{ fontWeight: '600' }}>Total Cost:</span>
-                <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#667eea' }}>
-                  {formatCurrency(parseFloat(sendAmount) + (parseFloat(sendAmount) * TRANSFER_FEE_PERCENT) + FLAT_FEE, 'CAD')}
-                </span>
-              </div>
-              <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#64748b' }}>
-                Exchange Rate: 1 CAD = {CAD_TO_KES_RATE} KES
-              </div>
+              <button onClick={() => navigate('/profile')} style={{ display: 'block', padding: '0.5rem 1rem', width: '100%' }}>Profile</button>
+              <button onClick={logout} style={{ display: 'block', padding: '0.5rem 1rem', width: '100%', color: '#d32f2f' }}>Logout</button>
             </div>
           )}
+        </div>
+      </div>
 
+      <div style={{ flex: 1, padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Welcome Back */}
+        <div style={{
+          background: 'linear-gradient(135deg, #d32f2f 0%, #2e7d32 50%, #1976d2 100%)',
+          borderRadius: '20px',
+          padding: '2.5rem',
+          marginBottom: '2rem',
+          color: 'white',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+          transition: 'transform 0.3s ease',
+        }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: '700' }}>Welcome back, {currentUser?.email || 'User'} 👋</h2>
+          <p style={{ marginTop: '0.5rem', fontSize: '1.1rem', opacity: 0.9 }}>
+            Send money securely from Canada to Kenya in minutes.
+          </p>
           <button
-            onClick={() => navigate('/transfers')}
+            onClick={handleSend}
             style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: '#667eea',
-              color: 'white',
+              marginTop: '1.5rem',
+              backgroundColor: 'white',
+              color: '#d32f2f',
+              padding: '0.8rem 2rem',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
+              borderRadius: '50px',
               cursor: 'pointer',
-              transition: 'background-color 0.2s'
+              fontWeight: '600',
+              fontSize: '1rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#5568d3'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#667eea'}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             Send Money Now
           </button>
         </div>
 
-        {/* Recent Transactions */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '30px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-        }}>
-          <h2 style={{ margin: '0 0 20px 0', fontSize: '1.5rem' }}>Recent Transactions</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+          {/* Transfer Calculator */}
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            padding: '2rem',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          }}>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1e293b' }}>
+              Transfer Calculator
+            </h3>
+            <label style={{ display: 'block', marginBottom: '1rem', fontWeight: '500' }}>You Send</label>
+            <input
+              type="number"
+              value={sendAmount}
+              onChange={(e) => setSendAmount(e.target.value)}
+              placeholder="Enter amount"
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                borderRadius: '12px',
+                border: '1px solid #cbd5e1',
+                marginBottom: '1rem'
+              }}
+            />
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                borderRadius: '12px',
+                border: '1px solid #cbd5e1',
+                marginBottom: '1rem'
+              }}
+            >
+              <option value="CAD">CAD</option>
+              <option value="USD">USD</option>
+            </select>
 
-          {loading && (
-            <p style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>Loading transactions...</p>
-          )}
-
-          {error && (
-            <div style={{
-              padding: '20px',
-              backgroundColor: '#fee2e2',
-              color: '#991b1b',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
-              {error}
+            <div style={{ marginTop: '1rem', fontSize: '1rem', color: '#1e293b' }}>
+              <p>Exchange Rate: 1 {currency} = {exchangeRates[currency]} KES</p>
+              <p>Fee: {calculateFee(Number(sendAmount)).toFixed(2)} {currency}</p>
+              <p style={{ fontWeight: '600' }}>They Receive: {calculateReceiveAmount().toFixed(2)} KES</p>
             </div>
-          )}
 
-          {!loading && !error && transactions.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-              <p style={{ fontSize: '1.1rem', marginBottom: '10px' }}>No transactions yet</p>
-              <p style={{ fontSize: '0.9rem' }}>Your transfer history will appear here</p>
-            </div>
-          )}
+            <button
+              onClick={handleSend}
+              style={{
+                marginTop: '1.5rem',
+                backgroundColor: '#d32f2f',
+                color: 'white',
+                padding: '0.8rem 2rem',
+                border: 'none',
+                borderRadius: '50px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '1rem',
+                width: '100%',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            >
+              Send Money Now
+            </button>
+          </div>
 
-          {!loading && !error && transactions.length > 0 && (
-            <div>
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  style={{
-                    padding: '20px',
-                    borderBottom: '1px solid #e2e8f0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', marginBottom: '5px' }}>
-                      To: {tx.recipient_name || tx.recipient_email}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
-                      {formatDate(tx.created_at)}
-                    </div>
-                  </div>
-                  
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '5px' }}>
-                      {formatCurrency(tx.amount, tx.from_currency)}
-                    </div>
-                    <div style={{
-                      display: 'inline-block',
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600',
-                      backgroundColor: getStatusColor(tx.status) + '20',
-                      color: getStatusColor(tx.status)
-                    }}>
-                      {getStatusText(tx.status)}
-                    </div>
-                  </div>
+          {/* Recent Transactions */}
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            padding: '2rem',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          }}>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1e293b' }}>
+              Recent Transactions
+            </h3>
+            {loadingTransactions && <p>Loading transactions...</p>}
+            {error && <p style={{ color: '#d32f2f' }}>{error}</p>}
+            {!loadingTransactions && !error && transactions.slice(0, 5).map((transaction) => (
+              <div key={transaction.id} style={{
+                padding: '1rem',
+                borderBottom: '1px solid #e2e8f0'
+              }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: '600', color: '#1e293b' }}>
+                  To: {transaction.recipient_first_name
+                        ? `${transaction.recipient_first_name} ${transaction.recipient_last_name || ''}`
+                        : transaction.recipient_email}
                 </div>
-              ))}
+                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                  {new Date(transaction.created_at).toLocaleDateString()} - {transaction.amount} {transaction.currency}
+                </div>
+                <div style={{
+                  marginTop: '0.25rem',
+                  color: transaction.status === 'completed' ? '#2e7d32' : transaction.status === 'pending' ? '#f9a825' : '#d32f2f',
+                  fontSize: '0.85rem'
+                }}>
+                  {transaction.status}
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() => navigate('/transactions')}
+              style={{
+                marginTop: '1.5rem',
+                backgroundColor: '#1976d2',
+                color: 'white',
+                padding: '0.8rem 2rem',
+                border: 'none',
+                borderRadius: '50px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '1rem',
+                width: '100%',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            >
+              View All
+            </button>
+          </div>
+        </div>
+
+        {/* Trust Indicators */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '1.5rem',
+          marginTop: '2rem'
+        }}>
+          {[
+            { icon: '🔒', title: 'Bank-Level Security', desc: 'Your transfers are encrypted and safe' },
+            { icon: '⚡', title: 'Fast Transfers', desc: 'Money delivered within minutes' },
+            { icon: '🏛️', title: 'Licensed Service', desc: 'Trusted and compliant' },
+          ].map((item, idx) => (
+            <div key={idx} style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.3s ease',
+            }}>
+              <div style={{ fontSize: '2rem' }}>{item.icon}</div>
+              <h4 style={{ marginTop: '0.5rem', fontWeight: '700', color: '#1e293b' }}>{item.title}</h4>
+              <p style={{ marginTop: '0.25rem', fontSize: '0.9rem', color: '#64748b' }}>{item.desc}</p>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </div>
