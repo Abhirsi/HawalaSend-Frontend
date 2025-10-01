@@ -480,254 +480,152 @@ const Transfers = () => {
     </div>
   );
 
-  const renderStep2 = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <h2 style={{
-        fontSize: '1.5rem',
-        fontWeight: '700',
-        background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-        backgroundClip: 'text',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        marginBottom: '1.5rem',
-        textAlign: 'center'
-      }}>
-        How would you like to pay?
-      </h2>
+const renderStep2 = () => (
+  <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+    <h2 style={{
+      fontSize: '1.5rem',
+      fontWeight: '700',
+      background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
+      backgroundClip: 'text',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      marginBottom: '1.5rem',
+      textAlign: 'center'
+    }}>
+      Payment Information
+    </h2>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-        <div 
-          onClick={() => handleInputChange({ target: { name: 'paymentMethod', value: 'interac' } })}
-          style={{
-            border: `2px solid ${transferData.paymentMethod === 'interac' ? '#1976d2' : '#e5e5e5'}`,
-            borderRadius: '12px',
-            padding: '1.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            background: transferData.paymentMethod === 'interac' ? '#f0f9ff' : 'white'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              background: '#1976d2',
+    <div style={{ 
+      background: '#f8fafc', 
+      border: '1px solid #e5e5e5', 
+      borderRadius: '12px', 
+      padding: '1.5rem'
+    }}>
+      <h3 style={{ margin: '0 0 1rem 0', fontWeight: '600', color: '#171717' }}>
+        Card Information
+      </h3>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Card Number
+          </label>
+          <input
+            type="text"
+            name="cardNumber"
+            value={transferData.cardNumber}
+            onChange={handleInputChange}
+            placeholder="1234 5678 9012 3456"
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              border: `2px solid ${validationErrors.cardNumber ? '#ef4444' : '#e5e5e5'}`,
               borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '1.2rem'
+              fontSize: '1rem',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+          {validationErrors.cardNumber && (
+            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+              {validationErrors.cardNumber}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '0.5rem'
             }}>
-              e
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 0.25rem 0', fontWeight: '600', color: '#171717' }}>
-                Interac e-Transfer
-              </h3>
-              <p style={{ margin: 0, color: '#737373', fontSize: '0.875rem' }}>
-                Pay directly from your Canadian bank account
-              </p>
-            </div>
-            <div style={{
-              background: '#22c55e',
-              color: 'white',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '12px',
-              fontSize: '0.75rem',
-              fontWeight: '600'
+              Expiry Date
+            </label>
+            <input
+              type="text"
+              name="expiryDate"
+              value={transferData.expiryDate}
+              onChange={handleInputChange}
+              placeholder="MM/YY"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                border: `2px solid ${validationErrors.expiryDate ? '#ef4444' : '#e5e5e5'}`,
+                borderRadius: '8px',
+                fontSize: '1rem',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            {validationErrors.expiryDate && (
+              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                {validationErrors.expiryDate}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '0.5rem'
             }}>
-              Popular
-            </div>
+              CVV
+            </label>
+            <input
+              type="text"
+              name="cvv"
+              value={transferData.cvv}
+              onChange={handleInputChange}
+              placeholder="123"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                border: `2px solid ${validationErrors.cvv ? '#ef4444' : '#e5e5e5'}`,
+                borderRadius: '8px',
+                fontSize: '1rem',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            {validationErrors.cvv && (
+              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                {validationErrors.cvv}
+              </span>
+            )}
           </div>
         </div>
 
-        <div 
-          onClick={() => handleInputChange({ target: { name: 'paymentMethod', value: 'card' } })}
-          style={{
-            border: `2px solid ${transferData.paymentMethod === 'card' ? '#1976d2' : '#e5e5e5'}`,
-            borderRadius: '12px',
-            padding: '1.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            background: transferData.paymentMethod === 'card' ? '#f0f9ff' : 'white'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              background: '#2e7d32',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '1.2rem'
-            }}>
-              💳
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 0.25rem 0', fontWeight: '600', color: '#171717' }}>
-                Credit or Debit Card
-              </h3>
-              <p style={{ margin: 0, color: '#737373', fontSize: '0.875rem' }}>
-                Visa, Mastercard, American Express
-              </p>
-            </div>
-            <div style={{
-              background: '#0ea5e9',
-              color: 'white',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '12px',
-              fontSize: '0.75rem',
-              fontWeight: '600'
-            }}>
-              Instant
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {validationErrors.paymentMethod && (
-        <span style={{ color: '#ef4444', fontSize: '0.75rem', display: 'block', marginBottom: '1rem' }}>
-          {validationErrors.paymentMethod}
-        </span>
-      )}
-
-      {transferData.paymentMethod === 'card' && (
-        <div style={{ 
-          background: '#f8fafc', 
-          border: '1px solid #e5e5e5', 
-          borderRadius: '12px', 
-          padding: '1.5rem',
-          animation: 'fadeIn 0.3s ease-out'
-        }}>
-          <h3 style={{ margin: '0 0 1rem 0', fontWeight: '600', color: '#171717' }}>
-            Card Information
-          </h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Card Number
-              </label>
-              <input
-                type="text"
-                name="cardNumber"
-                value={transferData.cardNumber}
-                onChange={handleInputChange}
-                placeholder="1234 5678 9012 3456"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: `2px solid ${validationErrors.cardNumber ? '#ef4444' : '#e5e5e5'}`,
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {validationErrors.cardNumber && (
-                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                  {validationErrors.cardNumber}
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Expiry Date
-                </label>
-                <input
-                  type="text"
-                  name="expiryDate"
-                  value={transferData.expiryDate}
-                  onChange={handleInputChange}
-                  placeholder="MM/YY"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    border: `2px solid ${validationErrors.expiryDate ? '#ef4444' : '#e5e5e5'}`,
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                {validationErrors.expiryDate && (
-                  <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    {validationErrors.expiryDate}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  CVV
-                </label>
-                <input
-                  type="text"
-                  name="cvv"
-                  value={transferData.cvv}
-                  onChange={handleInputChange}
-                  placeholder="123"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    border: `2px solid ${validationErrors.cvv ? '#ef4444' : '#e5e5e5'}`,
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                {validationErrors.cvv && (
-                  <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    {validationErrors.cvv}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {transferData.paymentMethod === 'interac' && (
         <div style={{
           background: '#f0f9ff',
           border: '1px solid #1976d2',
-          borderRadius: '12px',
-          padding: '1rem',
-          marginTop: '1rem'
+          borderRadius: '8px',
+          padding: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginTop: '0.5rem'
         }}>
-          <p style={{ margin: 0, color: '#1976d2', fontSize: '0.875rem', textAlign: 'center' }}>
-            You'll be redirected to your bank to complete the e-Transfer
-          </p>
+          <span style={{ fontSize: '1.25rem' }}>🔒</span>
+          <span style={{ fontSize: '0.875rem', color: '#1976d2' }}>
+            Your payment information is encrypted and secure
+          </span>
         </div>
-      )}
+      </div>
     </div>
-  );
+  </div>
+);
 
   const renderStep3 = () => (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
