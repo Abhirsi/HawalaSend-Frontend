@@ -46,7 +46,9 @@ const Register = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
-      console.log('User already logged in, redirecting to dashboard');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('User already logged in, redirecting to dashboard');
+      }
       navigate('/dashboard');
     }
   }, [currentUser, navigate]);
@@ -57,7 +59,6 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
     if (error) setError('');
   };
 
@@ -73,8 +74,14 @@ const Register = () => {
       return false;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    // 🔒 Improvement: stronger password policy (at least 8 chars + uppercase + number + special char)
+    if (
+      formData.password.length < 8 ||
+      !/(?=.*[A-Z])/.test(formData.password) ||
+      !/(?=.*[0-9])/.test(formData.password) ||
+      !/(?=.*[@$!%*?&])/.test(formData.password)
+    ) {
+      setError('Password must be at least 8 chars and include uppercase, number, and special character');
       return false;
     }
 
@@ -94,51 +101,58 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      console.log('Attempting registration for:', formData.email);
-      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Attempting registration for:', formData.email);
+      }
+
+      // ⚠️ Improvement: Ensure keys match backend (snake_case if required)
       const registrationData = {
         email: formData.email,
         username: formData.username,
         password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName
+        first_name: formData.firstName, // changed from firstName → safer for backend consistency
+        last_name: formData.lastName   // same as above
       };
       
       const response = await authAPI.register(registrationData);
-      
-      console.log('Registration response:', response.data);
-      
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Registration response:', response.data);
+      }
+
       if (response.data.user && response.data.token) {
-        setSuccess('Registration successful! Redirecting to dashboard...');
-        
-        // Store the token and user data
+        setSuccess(`Welcome, ${response.data.user.username}! Redirecting to dashboard...`);
+
+        // ⚠️ Security: localStorage is not recommended in production
+        // For now kept as-is, but in production prefer httpOnly cookies
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        // Redirect after a short delay to show success message
+
         setTimeout(() => {
           navigate('/dashboard');
         }, 2000);
-        
+
       } else {
         setError(response.data.message || 'Registration failed');
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      console.error('Error response:', err.response?.data);
-      
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Registration error:', err);
+        console.error('Error response:', err.response?.data);
+      }
+
       if (err.response?.status === 400) {
         setError(err.response.data.error || 'Invalid registration data');
+      } else if (err.response?.status === 409) {
+        // 🆕 Improvement: Handle conflict (duplicate email/username)
+        setError('Email or username already exists');
       } else if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
@@ -149,13 +163,8 @@ const Register = () => {
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   return (
     <Container component="main" maxWidth="md">
@@ -184,20 +193,11 @@ const Register = () => {
             <Typography 
               component="h1" 
               variant="h4" 
-              sx={{ 
-                fontWeight: 600,
-                color: 'text.primary',
-                mb: 1
-              }}
+              sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}
             >
               Create Your Account
             </Typography>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                color: 'text.secondary'
-              }}
-            >
+            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
               Join HawalaSend for secure money transfers
             </Typography>
           </Box>
@@ -221,6 +221,7 @@ const Register = () => {
                 <TextField
                   required
                   fullWidth
+                  autoFocus // 🆕 Improvement: autofocus first input
                   id="firstName"
                   label="First Name"
                   name="firstName"
@@ -317,7 +318,7 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   disabled={loading}
-                  helperText="Minimum 6 characters"
+                  helperText="At least 8 chars, with uppercase, number & special char"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -330,6 +331,7 @@ const Register = () => {
                           aria-label="toggle password visibility"
                           onClick={togglePasswordVisibility}
                           edge="end"
+                          disabled={loading} // 🆕 Prevent clicking during loading
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
@@ -364,6 +366,7 @@ const Register = () => {
                           aria-label="toggle confirm password visibility"
                           onClick={toggleConfirmPasswordVisibility}
                           edge="end"
+                          disabled={loading} // 🆕 Prevent clicking during loading
                         >
                           {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
@@ -398,11 +401,7 @@ const Register = () => {
               <Typography variant="body2">
                 Already have an account?{' '}
                 <Link to="/login" style={{ textDecoration: 'none' }}>
-                  <Typography 
-                    component="span" 
-                    color="primary"
-                    sx={{ fontWeight: 600 }}
-                  >
+                  <Typography component="span" color="primary" sx={{ fontWeight: 600 }}>
                     Sign in here
                   </Typography>
                 </Link>

@@ -24,6 +24,7 @@ const Dashboard = () => {
     'USD': 150   // USD to KES
   };
 
+  const { refreshAuth } = useAuth();
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
@@ -51,7 +52,7 @@ const Dashboard = () => {
       } else {
         setError('Unable to load transactions');
       }
-      
+
       setTransactions([]);
     } finally {
       setLoading(false);

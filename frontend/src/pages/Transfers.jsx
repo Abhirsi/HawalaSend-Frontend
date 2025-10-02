@@ -108,7 +108,10 @@ const Transfers = () => {
   const handleCurrencyChange = (e) => {
     const newCurrency = e.target.value;
     setSelectedCurrency(newCurrency);
-    calculateReceiveAmount(); // Recalculate on change
+    // Recalculate receive amount with new rate
+    const rate = currencyOptions.find(opt => opt.value === newCurrency)?.rateToKES || exchangeRate;
+    const currentAmount = parseFloat(transferData.amount) || 0;
+    setTransferData(prev => ({ ...prev, amount: (currentAmount / rate).toFixed(2) }));
   };
 
   const validateStep = (step) => {
@@ -360,6 +363,28 @@ const Transfers = () => {
           </div>
         </div>
       </div>
+
+      <select
+        value={selectedCurrency}
+        onChange={handleCurrencyChange}
+        style={{
+          margin: '1rem auto',
+          padding: '0.5rem 1rem',
+          border: '2px solid #e5e5e5',
+          borderRadius: '12px',
+          fontSize: '1rem',
+          background: 'white',
+          cursor: 'pointer',
+          width: '200px',
+          textAlign: 'center'
+        }}
+      >
+        {currencyOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
 
       <button
         onClick={() => {
