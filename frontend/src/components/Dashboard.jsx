@@ -35,13 +35,23 @@ const Dashboard = () => {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError(''); 
+      await refreshAuth();
+
       const response = await transferAPI.getHistory();
       console.log('Transaction API response:', response.data);
       setTransactions(response.data.transactions || []);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
-      setError('Unable to load transactions');
+      if (error.response?.status === 401) {
+        setError('Session expired, please log in again');
+        navigate('/login'); 
+      } else if (error.message === 'Network Error') {
+        setError('Network error. Check your connection.');
+      } else {
+        setError('Unable to load transactions');
+      }
+      
       setTransactions([]);
     } finally {
       setLoading(false);
