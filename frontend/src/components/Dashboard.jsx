@@ -5,7 +5,7 @@ import { transferAPI } from '../api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, refreshAuth, logout } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +24,6 @@ const Dashboard = () => {
     'USD': 150   // USD to KES
   };
 
-  const { refreshAuth } = useAuth();
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
