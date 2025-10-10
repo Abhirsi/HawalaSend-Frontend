@@ -1,9 +1,12 @@
 // frontend/src/api.js - Production-ready API with proper cookie-based auth
 import axios from 'axios';
 
-//const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1000';
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hawalasend-backend.up.railway.app';
-const api = axios.create({
+const API_BASE_URL = 
+process.env.REACT_APP_API_URL ||
+(process.env.NODE_ENV === 'development'
+    ? 'http://localhost:5001'
+    : 'https://hawalasend-backend.up.railway.app');
+  const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
   withCredentials: true, // Essential for HttpOnly cookies
@@ -89,89 +92,199 @@ api.interceptors.response.use(
 
 // Auth API - Cookie-based authentication only
 export const authAPI = {
-  login: (email, password) => {
+  login: async (email, password) => {
     console.log('🔐 Attempting login for:', email);
-    return api.post('/auth/login', { email, password });
+    
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      
+      // ✅ DEBUG: Show what backend returned
+      console.log('📦 Login response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        hasData: !!response.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        user: response.data?.user,
+        token: response.data?.token ? '✅ Token present' : '❌ No token',
+        cookies: document.cookie || 'No cookies found'
+      });
+      
+      // Check if token exists in response
+      if (response.data?.token) {
+        console.log('🔑 Token received (first 30 chars):', response.data.token.substring(0, 30) + '...');
+        console.log('⚠️ Note: You are using cookie-based auth, token in response may be for reference only');
+      }
+      
+      // Check cookies after login
+      console.log('🍪 Cookies after login:', document.cookie);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Login failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
-  
-  register: (userData) => {
+     
+  register: async (userData) => {
     console.log('📝 Attempting registration for:', userData.email);
-    return api.post('/auth/register', userData);
+    
+    try {
+      const response = await api.post('/auth/register', userData);
+      
+      console.log('📦 Registration response:', {
+        status: response.status,
+        user: response.data?.user,
+        message: response.data?.message
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Registration failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
-  
-  logout: () => {
+     
+  logout: async () => {
     console.log('🚪 Logging out user');
-    return api.post('/auth/logout');
+    console.log('🍪 Cookies before logout:', document.cookie);
+    
+    try {
+      const response = await api.post('/auth/logout');
+      
+      console.log('✅ Logout successful');
+      console.log('🍪 Cookies after logout:', document.cookie);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Logout failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
-  
-  getCurrentUser: () => {
+        
+  getCurrentUser: async () => {
     console.log('👤 Getting current user');
-    return api.get('/auth/me');
+    console.log('🍪 Cookies before request:', document.cookie);
+    
+    try {
+      const response = await api.get('/auth/me');
+      
+      console.log('📦 Current user response:', {
+        status: response.status,
+        user: response.data?.user || response.data
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Get current user failed:', error.response?.status, error.response?.data);
+      throw error;
+    }
   },
-  
-  refreshToken: () => {
+     
+  refreshToken: async () => {
     console.log('🔄 Refreshing token');
-    return api.post('/auth/refresh');
+    
+    try {
+      const response = await api.post('/auth/refresh');
+      
+      console.log('✅ Token refreshed');
+      console.log('🍪 Cookies after refresh:', document.cookie);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
-  
-  forgotPassword: (email) => {
+     
+  forgotPassword: async (email) => {
     console.log('📧 Requesting password reset for:', email);
-    return api.post('/auth/forgot-password', { email });
+    
+    try {
+      const response = await api.post('/auth/forgot-password', { email });
+      
+      console.log('✅ Password reset email sent');
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Forgot password failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
-
-  resetPassword: (token, newPassword) => {
+   
+  resetPassword: async (token, newPassword) => {
     console.log('🔒 Resetting password with token');
-    return api.post('/auth/reset-password', { token, newPassword });
+    
+    try {
+      const response = await api.post('/auth/reset-password', { token, newPassword });
+      
+      console.log('✅ Password reset successful');
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Password reset failed:', error.response?.data || error.message);
+      throw error;
+    }
   }
-};
+}; 
 
-// Transfer API
-export const transferAPI = {
-  send: (transferData) => {
-    console.log('💸 Sending transfer:', transferData.amount);
-    return api.post('/transfers/send', transferData);
-  },
-  
-  getHistory: (params = {}) => {
-    console.log('📜 Getting transfer history');
-    return api.get('/transfers/history', { params });
-  },
-  
-  
-  calculateFee: (amount, fromCurrency, toCurrency) => {
-    console.log(`🧮 Calculating fee for ${amount} ${fromCurrency} to ${toCurrency}`);
-    return api.post('/transfers/calculate-fee', { amount, fromCurrency, toCurrency });
-  }
-};
 
-// Transaction API
+// Transaction/Transfer API
 export const transactionAPI = {
-  getAll: (params = {}) => {
-    const { limit = 50, offset = 0, status, type } = params;
-    console.log('📊 Fetching transactions');
-    return api.get('/transactions', { params: { limit, offset, status, type } });
+  getHistory: async () => {
+    console.log('📜 Getting transfer history');
+    
+    try {
+      const response = await api.get('/transfers/history');
+      
+      console.log('📦 Transaction history response:', {
+        status: response.status,
+        count: response.data?.length || 0,
+        transactions: response.data
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Get history failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
   
-  getRecent: (limit = 5) => {
-    console.log(`🕐 Fetching ${limit} recent transactions`);
-    return api.get('/transactions/recent', { params: { limit } });
+  send: async (transferData) => {
+    console.log('💸 Sending transfer:', {
+      to: transferData.recipientEmail,
+      amount: transferData.amount
+    });
+    
+    try {
+      const response = await api.post('/transfers/send', transferData);
+      
+      console.log('✅ Transfer sent successfully:', response.data);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Transfer failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
   
-  getById: (id) => {
-    console.log(`🔍 Fetching transaction ${id}`);
-    return api.get(`/transactions/${id}`);
-  },
-  
-  getStats: (period = '30d') => {
-    console.log('📈 Fetching transaction statistics');
-    return api.get('/transactions/stats', { params: { period } });
-  },
-  
-  search: (searchParams = {}) => {
-    console.log('🔎 Searching transactions');
-    return api.get('/transactions/search', { params: searchParams });
+  getById: async (id) => {
+    console.log('🔍 Getting transaction:', id);
+    
+    try {
+      const response = await api.get(`/transfers/${id}`);
+      
+      console.log('📦 Transaction details:', response.data);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Get transaction failed:', error.response?.data || error.message);
+      throw error;
+    }
   }
 };
+
+// Alias for backwards compatibility
+export const transferAPI = transactionAPI;
 
 // User API
 export const userAPI = {

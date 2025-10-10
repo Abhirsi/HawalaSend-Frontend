@@ -1,416 +1,477 @@
-// frontend/src/components/Auth/Register.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authAPI } from '../../api';
-import {
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
-  Grid
-} from '@mui/material';
-import {
-  Email as EmailIcon,
-  Lock as LockIcon,
-  Person as PersonIcon,
-  AccountBox as AccountBoxIcon,
-  Visibility,
-  VisibilityOff,
-  PersonAdd as PersonAddIcon
-} from '@mui/icons-material';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     username: '',
     password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: ''
+    confirmPassword: ''
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
-  useEffect(() => {
-    if (currentUser) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('User already logged in, redirecting to dashboard');
-      }
-      navigate('/dashboard');
-    }
-  }, [currentUser, navigate]);
-
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (error) setError('');
-  };
-
-  const validateForm = () => {
-    if (!formData.email || !formData.username || !formData.password || 
-        !formData.confirmPassword || !formData.firstName || !formData.lastName) {
-      setError('Please fill in all fields');
-      return false;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-
-    // 🔒 Improvement: stronger password policy (at least 8 chars + uppercase + number + special char)
-    if (
-      formData.password.length < 8 ||
-      !/(?=.*[A-Z])/.test(formData.password) ||
-      !/(?=.*[0-9])/.test(formData.password) ||
-      !/(?=.*[@$!%*?&])/.test(formData.password)
-    ) {
-      setError('Password must be at least 8 chars and include uppercase, number, and special character');
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-
-    if (formData.username.length < 3) {
-      setError('Username must be at least 3 characters long');
-      return false;
-    }
-
-    return true;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
     setLoading(true);
     setError('');
-    setSuccess('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      setLoading(false);
+      return;
+    }
 
     try {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Attempting registration for:', formData.email);
-      }
-
-      // ⚠️ Improvement: Ensure keys match backend (snake_case if required)
-      const registrationData = {
+      await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
         username: formData.username,
-        password: formData.password,
-        first_name: formData.firstName, // changed from firstName → safer for backend consistency
-        last_name: formData.lastName   // same as above
-      };
-      
-      const response = await authAPI.register(registrationData);
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Registration response:', response.data);
-      }
-
-      if (response.data.user && response.data.token) {
-        setSuccess(`Welcome, ${response.data.user.username}! Redirecting to dashboard...`);
-
-        // ⚠️ Security: localStorage is not recommended in production
-        // For now kept as-is, but in production prefer httpOnly cookies
-        localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-
-      } else {
-        setError(response.data.message || 'Registration failed');
-      }
+        password: formData.password
+      });
+      navigate('/dashboard');
     } catch (err) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Registration error:', err);
-        console.error('Error response:', err.response?.data);
-      }
-
-      if (err.response?.status === 400) {
-        setError(err.response.data.error || 'Invalid registration data');
-      } else if (err.response?.status === 409) {
-        // 🆕 Improvement: Handle conflict (duplicate email/username)
-        setError('Email or username already exists');
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError('Registration failed. Please try again.');
-      }
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
-  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
+  const handleGoogleSignup = () => {
+    setError('Google Sign-Up coming soon!');
+    setTimeout(() => setError(''), 3000);
+  };
 
   return (
-    <Container component="main" maxWidth="md">
-      <Box
-        sx={{
-          minHeight: '100vh',
+    <div style={{
+      minHeight: 'calc(100vh - 200px)',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '3rem 1rem',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      margin: '-16px -24px'
+    }}>
+      
+      {/* Logo Section */}
+      <div style={{
+        textAlign: 'center',
+        marginBottom: '2rem'
+      }}>
+        <div style={{
+          width: '100px',
+          height: '100px',
+          background: 'white',
+          borderRadius: '50%',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%)',
-          py: 4
-        }}
-      >
-        <Paper 
-          elevation={6} 
-          sx={{ 
-            padding: 5, 
-            width: '100%',
-            borderRadius: 3,
-            boxShadow: '0 20px 60px rgba(25, 118, 210, 0.1)'
-          }}
-        >
-          {/* Header */}
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography 
-              component="h1" 
-              variant="h4" 
-              sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}
-            >
-              Create Your Account
-            </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-              Join HawalaSend for secure money transfers
-            </Typography>
-          </Box>
+          margin: '0 auto 1.5rem auto',
+          fontSize: '3.5rem',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25)'
+        }}>
+          🦜
+        </div>
+        <h1 style={{
+          fontSize: '2.5rem',
+          fontWeight: '800',
+          color: 'white',
+          margin: '0 0 0.5rem 0',
+          letterSpacing: '-1px',
+          textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+        }}>
+          Join TapTap Send
+        </h1>
+        <p style={{
+          color: 'rgba(255, 255, 255, 0.95)',
+          margin: 0,
+          fontSize: '1.125rem',
+          fontWeight: '500'
+        }}>
+          Create your account in seconds
+        </p>
+      </div>
 
+      <div style={{
+        width: '100%',
+        maxWidth: '520px'
+      }}>
+
+        {/* Register Card */}
+        <div style={{
+          background: 'white',
+          borderRadius: '24px',
+          padding: '2rem',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+        }}>
+          
           {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {error}
-            </Alert>
+            <div style={{
+              background: '#fef2f2',
+              border: '2px solid #fecaca',
+              borderRadius: '14px',
+              padding: '1rem 1.25rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <span style={{ fontSize: '1.375rem' }}>⚠️</span>
+              <span style={{ color: '#dc2626', fontSize: '0.9375rem', fontWeight: '600' }}>
+                {error}
+              </span>
+            </div>
           )}
 
-          {success && (
-            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-              {success}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              {/* Personal Information */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  autoFocus // 🆕 Improvement: autofocus first input
-                  id="firstName"
-                  label="First Name"
+          <form onSubmit={handleSubmit}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1rem',
+              marginBottom: '1.25rem'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  First Name
+                </label>
+                <input
+                  type="text"
                   name="firstName"
-                  autoComplete="given-name"
                   value={formData.firstName}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
+                  onChange={handleChange}
+                  placeholder="John"
                   required
-                  fullWidth
-                  id="lastName"
-                  label="Last Name"
+                  autoComplete="given-name"
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '14px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Last Name
+                </label>
+                <input
+                  type="text"
                   name="lastName"
-                  autoComplete="family-name"
                   value={formData.lastName}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-
-              {/* Account Information */}
-              <Grid item xs={12}>
-                <TextField
+                  onChange={handleChange}
+                  placeholder="Doe"
                   required
-                  fullWidth
-                  id="email"
-                  label="Email Address"
-                  name="email"
-                  autoComplete="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailIcon color="primary" />
-                      </InputAdornment>
-                    ),
+                  autoComplete="family-name"
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '14px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                 />
-              </Grid>
+              </div>
+            </div>
 
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  id="username"
-                  label="Username"
-                  name="username"
-                  autoComplete="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  helperText="Minimum 3 characters, no spaces"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <AccountBoxIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                Username
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="johndoe"
+                required
+                autoComplete="username"
+                style={{
+                  width: '100%',
+                  padding: '1rem 1.25rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '14px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
 
-              {/* Password Fields */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  autoComplete="new-password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  helperText="At least 8 chars, with uppercase, number & special char"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LockIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={togglePasswordVisibility}
-                          edge="end"
-                          disabled={loading} // 🆕 Prevent clicking during loading
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="your@email.com"
+                required
+                autoComplete="email"
+                style={{
+                  width: '100%',
+                  padding: '1rem 1.25rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '14px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  name="confirmPassword"
-                  label="Confirm Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  autoComplete="new-password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  helperText="Must match password"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LockIcon color="primary" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle confirm password visibility"
-                          onClick={toggleConfirmPasswordVisibility}
-                          edge="end"
-                          disabled={loading} // 🆕 Prevent clicking during loading
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-            </Grid>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="At least 8 characters"
+                required
+                autoComplete="new-password"
+                style={{
+                  width: '100%',
+                  padding: '1rem 1.25rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '14px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
 
-            <Button
+            <div style={{ marginBottom: '1.75rem' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Re-enter password"
+                required
+                autoComplete="new-password"
+                style={{
+                  width: '100%',
+                  padding: '1rem 1.25rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '14px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
+
+            <button
               type="submit"
-              fullWidth
-              variant="contained"
               disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} /> : <PersonAddIcon />}
-              sx={{ 
-                mt: 4, 
-                mb: 3, 
-                py: 1.5,
-                fontSize: '1.1rem',
-                background: 'linear-gradient(135deg, #1976d2 0%, #2e7d32 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #1565c0 0%, #1b5e20 100%)',
+              style={{
+                width: '100%',
+                padding: '1.125rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '14px',
+                fontSize: '1.0625rem',
+                fontWeight: '700',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                transition: 'all 0.2s ease',
+                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                marginBottom: '1.25rem'
+              }}
+              onMouseOver={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.5)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
                 }
               }}
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </Button>
+              {loading ? 'Creating account...' : 'SIGN UP'}
+            </button>
+          </form>
 
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Typography variant="body2">
-                Already have an account?{' '}
-                <Link to="/login" style={{ textDecoration: 'none' }}>
-                  <Typography component="span" color="primary" sx={{ fontWeight: 600 }}>
-                    Sign in here
-                  </Typography>
-                </Link>
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+          <div style={{
+            textAlign: 'center',
+            color: '#9ca3af',
+            fontSize: '0.875rem',
+            margin: '1.25rem 0',
+            fontWeight: '600'
+          }}>
+            Or
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleSignup}
+            style={{
+              width: '100%',
+              padding: '1rem 1.25rem',
+              background: 'white',
+              color: '#374151',
+              border: '2px solid #e5e7eb',
+              borderRadius: '14px',
+              fontSize: '0.9375rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.875rem',
+              marginBottom: '1.75rem'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = '#f9fafb';
+              e.currentTarget.style.borderColor = '#d1d5db';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.borderColor = '#e5e7eb';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+              <path d="M19.6 10.227c0-.709-.064-1.39-.182-2.045H10v3.868h5.382a4.6 4.6 0 01-1.996 3.018v2.51h3.232c1.891-1.742 2.982-4.305 2.982-7.35z" fill="#4285F4"/>
+              <path d="M10 20c2.7 0 4.964-.895 6.618-2.423l-3.232-2.509c-.895.6-2.04.955-3.386.955-2.605 0-4.81-1.76-5.595-4.123H1.064v2.59A9.996 9.996 0 0010 20z" fill="#34A853"/>
+              <path d="M4.405 11.9c-.2-.6-.314-1.24-.314-1.9 0-.66.114-1.3.314-1.9V5.51H1.064A9.996 9.996 0 000 10c0 1.614.386 3.14 1.064 4.49l3.34-2.59z" fill="#FBBC05"/>
+              <path d="M10 3.977c1.468 0 2.786.505 3.823 1.496l2.868-2.868C14.959.99 12.695 0 10 0 6.09 0 2.71 2.24 1.064 5.51l3.34 2.59C5.19 5.736 7.395 3.977 10 3.977z" fill="#EA4335"/>
+            </svg>
+            CONTINUE WITH GOOGLE
+          </button>
+
+          <div style={{
+            textAlign: 'center',
+            fontSize: '0.9375rem',
+            color: '#6b7280',
+            marginBottom: '1.5rem'
+          }}>
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              style={{
+                color: '#667eea',
+                fontWeight: '700',
+                textDecoration: 'none'
+              }}
+              onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+              onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+            >
+              Log in
+            </Link>
+          </div>
+
+          <div style={{
+            padding: '1rem',
+            background: '#f9fafb',
+            borderRadius: '12px',
+            fontSize: '0.75rem',
+            color: '#6b7280',
+            textAlign: 'center',
+            lineHeight: '1.5'
+          }}>
+            By signing up, you agree to our Terms of Service and Privacy Policy
+          </div>
+        </div>
+
+        {/* Footer Spacing */}
+        <div style={{ paddingBottom: '1rem' }} />
+      </div>
+    </div>
   );
 };
 

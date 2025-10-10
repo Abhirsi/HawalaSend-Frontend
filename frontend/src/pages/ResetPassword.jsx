@@ -19,66 +19,38 @@ const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
-
   const [formData, setFormData] = useState({
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(true); // Start loading for token check
-  const [tokenValid, setTokenValid] = useState(null); // Null until validated
+  newPassword: '',
+  confirmPassword: ''
+});
+const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+const [error, setError] = useState('');
+const [success, setSuccess] = useState(false);
+const [loading, setLoading] = useState(false);
+const [tokenValid, setTokenValid] = useState(true);
 
-  // Password strength checker
-  const checkPasswordStrength = (password) => {
-    const checks = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
-    const score = Object.values(checks).filter(Boolean).length;
-    return {
-      checks,
-      score,
-      strength: score < 2 ? 'Weak' : score < 4 ? 'Medium' : 'Strong',
-      color: score < 2 ? 'error' : score < 4 ? 'warning' : 'success'
-    };
+// Password strength checker
+const checkPasswordStrength = (password) => {
+  const checks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
   };
+  const score = Object.values(checks).filter(Boolean).length;
+  return {
+    checks,
+    score,
+    strength: score < 2 ? 'Weak' : score < 4 ? 'Medium' : 'Strong',
+    color: score < 2 ? 'error' : score < 4 ? 'warning' : 'success'
+  };
+};
 
-  const passwordStrength = checkPasswordStrength(formData.newPassword);
+const passwordStrength = checkPasswordStrength(formData.newPassword);
 
-  // Validate token on mount
-  useEffect(() => {
-    const validateToken = async () => {
-      if (!token) {
-        setTokenValid(false);
-        setError('Invalid or missing reset token. Please request a new password reset.');
-        setLoading(false);
-        return;
-      }
-      try {
-        const response = await authAPI.resetPassword(token, ''); // Empty password to check token
-        if (response.data.success || response.data.message === 'Token is valid') {
-          setTokenValid(true);
-        } else {
-          setTokenValid(false);
-          setError(response.data.message || 'Invalid token');
-        }
-      } catch (error) {
-        setTokenValid(false);
-        setError(error.response?.data?.error || 'Token validation failed. Please request a new link.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    validateToken();
-  }, [token]);
-
-  const handleInputChange = (e) => {
+const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -86,6 +58,14 @@ const ResetPassword = () => {
     }));
     if (error) setError('');
   };
+
+// Check for missing token
+useEffect(() => {
+  if (!token) {
+    setTokenValid(false);
+    setError('Invalid or missing reset token. Please request a new password reset.');
+  }
+}, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,32 +90,19 @@ const ResetPassword = () => {
 
     try {
       const response = await authAPI.resetPassword(token, formData.newPassword);
-      if (response.data.success) {
-        setSuccess(true);
-        setTimeout(() => navigate('/login', { state: { message: 'Password reset successful!' } }), 3000);
-      } else {
-        setError(response.data.message || 'Reset failed');
-      }
+      setSuccess(true);
+      setTimeout(() => navigate('/login', { state: { message: 'Password reset successful!' } }), 3000);
     } catch (error) {
-      setError(error.response?.data?.error || 'Network error. Try again.');
-      if (error.response?.status === 400 && error.response.data.error.includes('expired')) {
-        setTokenValid(false);
+      
+      const errorMsg = error.response?.data?.error || 'Network error. Try again.';
+        setError(errorMsg);
+        if (error.response?.status === 400 && errorMsg.includes('token')) {
+          setTokenValid(false);
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Container component="main" maxWidth="sm">
-        <Box sx={{ marginTop: 8, textAlign: 'center' }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }}>Validating reset token...</Typography>
-        </Box>
-      </Container>
-    );
-  }
+    };
 
   if (success) {
     return (

@@ -21,7 +21,12 @@ export const AuthProvider = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        setLoading(true);
+        if (window.location.pathname === '/reset-password') {
+          setLoading(false);
+          return;
+        }
+
+      setLoading(true);
         
         // With httpOnly cookies, just check if the cookie is valid by calling /auth/me
         const response = await authAPI.getCurrentUser();

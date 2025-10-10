@@ -1,41 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
+
+// InputField component - MUST be outside
+const InputField = React.memo(({ label, value, onChange, type = 'text', placeholder, disabled = false }) => {
+  const inputRef = React.useRef(null);
+
+  return (
+    <div>
+      <label style={{
+        display: 'block',
+        fontSize: '0.875rem',
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: '0.5rem'
+      }}>
+        {label}
+      </label>
+      <input
+        ref={inputRef}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+        style={{
+          width: '100%',
+          padding: '0.875rem 1rem',
+          border: '2px solid #e5e7eb',
+          borderRadius: '12px',
+          fontSize: '1rem',
+          transition: 'all 0.2s ease',
+          outline: 'none',
+          boxSizing: 'border-box',
+          backgroundColor: disabled ? '#f9fafb' : 'white',
+          color: disabled ? '#9ca3af' : '#111827'
+        }}
+        onFocus={(e) => !disabled && (e.target.style.borderColor = '#667eea')}
+        onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+      />
+    </div>
+  );
+});
 
 const UserProfile = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, refreshAuth } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
   
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
+    phoneNumber: '',
     username: ''
   });
   
-  const [securityData, setSecurityData] = useState({
+  const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
-    confirmPassword: '',
-    pin: '',
-    newPin: '',
-    confirmPin: ''
+    confirmPassword: ''
   });
-  
-  const [notifications, setNotifications] = useState({
-    emailTransfers: true,
-    smsTransfers: false,
-    emailLogin: true,
-    smsLogin: false,
-    emailPromotions: false,
-    smsPromotions: false
-  });
-  
-  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     if (!currentUser) {
@@ -43,1096 +73,97 @@ const UserProfile = () => {
       return;
     }
     
-    // Initialize form data with current user info
     setProfileData({
-      firstName: currentUser.first_name || '',
-      lastName: currentUser.last_name || '',
+      firstName: currentUser.firstName || '',
+      lastName: currentUser.lastName || '',
       email: currentUser.email || '',
-      phone: currentUser.phone || '',
+      phoneNumber: currentUser.phoneNumber || '',
       username: currentUser.username || ''
     });
   }, [currentUser, navigate]);
 
-  const handleInputChange = (section, field, value) => {
-    if (section === 'profile') {
-      setProfileData(prev => ({ ...prev, [field]: value }));
-    } else if (section === 'security') {
-      setSecurityData(prev => ({ ...prev, [field]: value }));
-    } else if (section === 'notifications') {
-      setNotifications(prev => ({ ...prev, [field]: value }));
-    }
-    
-    // Clear validation errors when user types
-    if (validationErrors[field]) {
-      setValidationErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
+  const handleProfileChange = React.useCallback((field, value) => {
+    setProfileData(prev => ({ ...prev, [field]: value }));
+    setError('');
+  }, []);
 
-  const validateProfile = () => {
-    const errors = {};
-    
-    if (!profileData.firstName.trim()) {
-      errors.firstName = 'First name is required';
-    }
-    if (!profileData.lastName.trim()) {
-      errors.lastName = 'Last name is required';
-    }
-    if (!profileData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(profileData.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-    if (!profileData.username.trim()) {
-      errors.username = 'Username is required';
-    } else if (profileData.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  const handlePasswordChange = React.useCallback((field, value) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+    setError('');
+  }, []);
 
-  const validateSecurity = () => {
-    const errors = {};
-    
-    if (securityData.newPassword) {
-      if (!securityData.currentPassword) {
-        errors.currentPassword = 'Current password is required';
-      }
-      if (securityData.newPassword.length < 6) {
-        errors.newPassword = 'New password must be at least 6 characters';
-      }
-      if (securityData.newPassword !== securityData.confirmPassword) {
-        errors.confirmPassword = 'Passwords do not match';
-      }
-    }
-    
-    if (securityData.newPin) {
-      if (securityData.newPin.length < 4) {
-        errors.newPin = 'PIN must be at least 4 digits';
-      }
-      if (securityData.newPin !== securityData.confirmPin) {
-        errors.confirmPin = 'PINs do not match';
-      }
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSave = async (section) => {
+  const handleSaveProfile = React.useCallback(async () => {
     setLoading(true);
-    
+    setError('');
+    setSuccess('');
+
     try {
-      let isValid = true;
+      const response = await fetch('http://localhost:5001/users/profile', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          phoneNumber: profileData.phoneNumber,
+          username: profileData.username
+        })
+      });
       
-      if (section === 'profile') {
-        isValid = validateProfile();
-      } else if (section === 'security') {
-        isValid = validateSecurity();
-      }
+      if (!response.ok) throw new Error('Failed to update profile');
       
-      if (!isValid) {
-        setLoading(false);
-        return;
-      }
+      await refreshAuth();
+      setSuccess('Profile updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-      
-      if (section === 'security') {
-        setSecurityData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-          pin: '',
-          newPin: '',
-          confirmPin: ''
-        });
-      }
-    } catch (error) {
-      setValidationErrors({ general: 'Failed to save changes. Please try again.' });
+    } catch (err) {
+      setError('Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [profileData, refreshAuth]);
 
-  const handleDeleteAccount = () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete your account? This action cannot be undone.'
-    );
-    
-    if (confirmed) {
-      const doubleConfirmed = window.confirm(
-        'This will permanently delete all your data. Are you absolutely sure?'
-      );
-      
-      if (doubleConfirmed) {
-        // In a real app, this would call an API
-        alert('Account deletion would be processed. (Demo only)');
-      }
+  const handleSavePassword = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      setLoading(false);
+      return;
     }
-  };
 
-  const renderProfileTab = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '2rem'
-      }}>
-        <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: '2rem',
-          fontWeight: '700',
-          marginRight: '1.5rem'
-        }}>
-          {profileData.firstName?.[0] || 'U'}{profileData.lastName?.[0] || ''}
-        </div>
-        <div>
-          <h2 style={{
-            fontSize: '1.5rem',
-            fontWeight: '700',
-            color: '#171717',
-            margin: '0 0 0.25rem 0'
-          }}>
-            {profileData.firstName} {profileData.lastName}
-          </h2>
-          <p style={{
-            color: '#737373',
-            margin: '0',
-            fontSize: '1rem'
-          }}>
-            @{profileData.username}
-          </p>
-        </div>
-      </div>
+    if (passwordData.newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      setLoading(false);
+      return;
+    }
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '1.5rem'
-      }}>
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            First Name
-          </label>
-          <input
-            type="text"
-            value={profileData.firstName}
-            onChange={(e) => handleInputChange('profile', 'firstName', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: `2px solid ${validationErrors.firstName ? '#ef4444' : '#e5e5e5'}`,
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              if (!validationErrors.firstName) {
-                e.target.style.borderColor = '#0ea5e9';
-              }
-            }}
-            onBlur={(e) => {
-              if (!validationErrors.firstName) {
-                e.target.style.borderColor = '#e5e5e5';
-              }
-            }}
-          />
-          {validationErrors.firstName && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.firstName}
-            </span>
-          )}
-        </div>
-
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Last Name
-          </label>
-          <input
-            type="text"
-            value={profileData.lastName}
-            onChange={(e) => handleInputChange('profile', 'lastName', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: `2px solid ${validationErrors.lastName ? '#ef4444' : '#e5e5e5'}`,
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              if (!validationErrors.lastName) {
-                e.target.style.borderColor = '#0ea5e9';
-              }
-            }}
-            onBlur={(e) => {
-              if (!validationErrors.lastName) {
-                e.target.style.borderColor = '#e5e5e5';
-              }
-            }}
-          />
-          {validationErrors.lastName && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.lastName}
-            </span>
-          )}
-        </div>
-
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Username
-          </label>
-          <input
-            type="text"
-            value={profileData.username}
-            onChange={(e) => handleInputChange('profile', 'username', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: `2px solid ${validationErrors.username ? '#ef4444' : '#e5e5e5'}`,
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              if (!validationErrors.username) {
-                e.target.style.borderColor = '#0ea5e9';
-              }
-            }}
-            onBlur={(e) => {
-              if (!validationErrors.username) {
-                e.target.style.borderColor = '#e5e5e5';
-              }
-            }}
-          />
-          {validationErrors.username && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.username}
-            </span>
-          )}
-        </div>
-
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Email Address
-          </label>
-          <input
-            type="email"
-            value={profileData.email}
-            onChange={(e) => handleInputChange('profile', 'email', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: `2px solid ${validationErrors.email ? '#ef4444' : '#e5e5e5'}`,
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              if (!validationErrors.email) {
-                e.target.style.borderColor = '#0ea5e9';
-              }
-            }}
-            onBlur={(e) => {
-              if (!validationErrors.email) {
-                e.target.style.borderColor = '#e5e5e5';
-              }
-            }}
-          />
-          {validationErrors.email && (
-            <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-              {validationErrors.email}
-            </span>
-          )}
-        </div>
-
-        <div>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#374151',
-            marginBottom: '0.5rem'
-          }}>
-            Phone Number
-          </label>
-          <input
-            type="tel"
-            value={profileData.phone}
-            onChange={(e) => handleInputChange('profile', 'phone', e.target.value)}
-            placeholder="+1 (555) 123-4567"
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: '2px solid #e5e5e5',
-              borderRadius: '12px',
-              fontSize: '1rem',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#0ea5e9'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e5e5'}
-          />
-        </div>
-      </div>
-
-      <div style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        marginTop: '2rem',
-        gap: '1rem'
-      }}>
-        <button
-          onClick={() => handleSave('profile')}
-          disabled={loading}
-          style={{
-            background: '#0ea5e9',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '0.75rem 2rem',
-            fontWeight: '600',
-            fontSize: '1rem',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-          onMouseOver={(e) => {
-            if (!loading) {
-              e.target.style.background = '#0284c7';
-              e.target.style.transform = 'translateY(-2px)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!loading) {
-              e.target.style.background = '#0ea5e9';
-              e.target.style.transform = 'translateY(0px)';
-            }
-          }}
-        >
-          {loading ? (
-            <>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                border: '2px solid transparent',
-                borderTop: '2px solid white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
-              Saving...
-            </>
-          ) : 'Save Changes'}
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderSecurityTab = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div style={{
-        display: 'grid',
-        gap: '2rem'
-      }}>
-        {/* Password Section */}
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e5e5e5',
-          borderRadius: '12px',
-          padding: '1.5rem'
-        }}>
-          <h3 style={{
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#171717',
-            margin: '0 0 1rem 0'
-          }}>
-            Change Password
-          </h3>
-
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={securityData.currentPassword}
-                onChange={(e) => handleInputChange('security', 'currentPassword', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: `2px solid ${validationErrors.currentPassword ? '#ef4444' : '#e5e5e5'}`,
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  transition: 'all 0.2s ease',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => {
-                  if (!validationErrors.currentPassword) {
-                    e.target.style.borderColor = '#0ea5e9';
-                  }
-                }}
-                onBlur={(e) => {
-                  if (!validationErrors.currentPassword) {
-                    e.target.style.borderColor = '#e5e5e5';
-                  }
-                }}
-              />
-              {validationErrors.currentPassword && (
-                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                  {validationErrors.currentPassword}
-                </span>
-              )}
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1rem'
-            }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  value={securityData.newPassword}
-                  onChange={(e) => handleInputChange('security', 'newPassword', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    border: `2px solid ${validationErrors.newPassword ? '#ef4444' : '#e5e5e5'}`,
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    transition: 'all 0.2s ease',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => {
-                    if (!validationErrors.newPassword) {
-                      e.target.style.borderColor = '#0ea5e9';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    if (!validationErrors.newPassword) {
-                      e.target.style.borderColor = '#e5e5e5';
-                    }
-                  }}
-                />
-                {validationErrors.newPassword && (
-                  <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    {validationErrors.newPassword}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Confirm New Password
-                </label>
-                <input
-                  type="password"
-                  value={securityData.confirmPassword}
-                  onChange={(e) => handleInputChange('security', 'confirmPassword', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    border: `2px solid ${validationErrors.confirmPassword ? '#ef4444' : '#e5e5e5'}`,
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    transition: 'all 0.2s ease',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => {
-                    if (!validationErrors.confirmPassword) {
-                      e.target.style.borderColor = '#0ea5e9';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    if (!validationErrors.confirmPassword) {
-                      e.target.style.borderColor = '#e5e5e5';
-                    }
-                  }}
-                />
-                {validationErrors.confirmPassword && (
-                  <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    {validationErrors.confirmPassword}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* PIN Section */}
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e5e5e5',
-          borderRadius: '12px',
-          padding: '1.5rem'
-        }}>
-          <h3 style={{
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#171717',
-            margin: '0 0 1rem 0'
-          }}>
-            Change PIN
-          </h3>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '1rem'
-          }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                New PIN
-              </label>
-              <input
-                type="text"
-                value={securityData.newPin}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
-                  handleInputChange('security', 'newPin', numericValue);
-                }}
-                placeholder="4-6 digits"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: `2px solid ${validationErrors.newPin ? '#ef4444' : '#e5e5e5'}`,
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  textAlign: 'center',
-                  letterSpacing: '0.25rem',
-                  transition: 'all 0.2s ease',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => {
-                  if (!validationErrors.newPin) {
-                    e.target.style.borderColor = '#0ea5e9';
-                  }
-                }}
-                onBlur={(e) => {
-                  if (!validationErrors.newPin) {
-                    e.target.style.borderColor = '#e5e5e5';
-                  }
-                }}
-              />
-              {validationErrors.newPin && (
-                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                  {validationErrors.newPin}
-                </span>
-              )}
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Confirm PIN
-              </label>
-              <input
-                type="text"
-                value={securityData.confirmPin}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
-                  handleInputChange('security', 'confirmPin', numericValue);
-                }}
-                placeholder="Repeat PIN"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: `2px solid ${validationErrors.confirmPin ? '#ef4444' : '#e5e5e5'}`,
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  textAlign: 'center',
-                  letterSpacing: '0.25rem',
-                  transition: 'all 0.2s ease',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => {
-                  if (!validationErrors.confirmPin) {
-                    e.target.style.borderColor = '#0ea5e9';
-                  }
-                }}
-                onBlur={(e) => {
-                  if (!validationErrors.confirmPin) {
-                    e.target.style.borderColor = '#e5e5e5';
-                  }
-                }}
-              />
-              {validationErrors.confirmPin && (
-                <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                  {validationErrors.confirmPin}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '1rem'
-        }}>
-          <button
-            onClick={() => handleSave('security')}
-            disabled={loading}
-            style={{
-              background: '#0ea5e9',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '0.75rem 2rem',
-              fontWeight: '600',
-              fontSize: '1rem',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-            onMouseOver={(e) => {
-              if (!loading) {
-                e.target.style.background = '#0284c7';
-                e.target.style.transform = 'translateY(-2px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!loading) {
-                e.target.style.background = '#0ea5e9';
-                e.target.style.transform = 'translateY(0px)';
-              }
-            }}
-          >
-            {loading ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid transparent',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                Updating...
-              </>
-            ) : 'Update Security'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderNotificationsTab = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div style={{ display: 'grid', gap: '2rem' }}>
-        {/* Email Notifications */}
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e5e5e5',
-          borderRadius: '12px',
-          padding: '1.5rem'
-        }}>
-          <h3 style={{
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#171717',
-            margin: '0 0 1rem 0'
-          }}>
-            Email Notifications
-          </h3>
-
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {[
-              { key: 'emailTransfers', label: 'Transfer notifications', desc: 'Get notified when you send or receive money' },
-              { key: 'emailLogin', label: 'Login alerts', desc: 'Security notifications for account access' },
-              { key: 'emailPromotions', label: 'Promotions and updates', desc: 'Special offers and product updates' }
-            ].map(item => (
-              <div key={item.key} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1rem',
-                background: 'white',
-                borderRadius: '8px',
-                border: '1px solid #e5e5e5'
-              }}>
-                <div>
-                  <h4 style={{
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#171717',
-                    margin: '0 0 0.25rem 0'
-                  }}>
-                    {item.label}
-                  </h4>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#737373',
-                    margin: '0'
-                  }}>
-                    {item.desc}
-                  </p>
-                </div>
-                <label style={{
-                  position: 'relative',
-                  display: 'inline-block',
-                  width: '48px',
-                  height: '24px',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notifications[item.key]}
-                    onChange={(e) => handleInputChange('notifications', item.key, e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: notifications[item.key] ? '#0ea5e9' : '#e5e5e5',
-                    borderRadius: '24px',
-                    transition: 'all 0.2s ease',
-                    '::before': {
-                      content: '""',
-                      position: 'absolute',
-                      height: '20px',
-                      width: '20px',
-                      left: notifications[item.key] ? '26px' : '2px',
-                      bottom: '2px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      transition: 'all 0.2s ease'
-                    }
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      height: '20px',
-                      width: '20px',
-                      left: notifications[item.key] ? '26px' : '2px',
-                      bottom: '2px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      transition: 'all 0.2s ease'
-                    }} />
-                  </div>
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* SMS Notifications */}
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e5e5e5',
-          borderRadius: '12px',
-          padding: '1.5rem'
-        }}>
-          <h3 style={{
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#171717',
-            margin: '0 0 1rem 0'
-          }}>
-            SMS Notifications
-          </h3>
-
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {[
-              { key: 'smsTransfers', label: 'Transfer alerts', desc: 'Text message notifications for transfers' },
-              { key: 'smsLogin', label: 'Login security', desc: 'SMS alerts for account access' },
-              { key: 'smsPromotions', label: 'Promotional messages', desc: 'Special offers via text message' }
-            ].map(item => (
-              <div key={item.key} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1rem',
-                background: 'white',
-                borderRadius: '8px',
-                border: '1px solid #e5e5e5'
-              }}>
-                <div>
-                  <h4 style={{
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#171717',
-                    margin: '0 0 0.25rem 0'
-                  }}>
-                    {item.label}
-                  </h4>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: '#737373',
-                    margin: '0'
-                  }}>
-                    {item.desc}
-                  </p>
-                </div>
-                <label style={{
-                  position: 'relative',
-                  display: 'inline-block',
-                  width: '48px',
-                  height: '24px',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notifications[item.key]}
-                    onChange={(e) => handleInputChange('notifications', item.key, e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: notifications[item.key] ? '#0ea5e9' : '#e5e5e5',
-                    borderRadius: '24px',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      height: '20px',
-                      width: '20px',
-                      left: notifications[item.key] ? '26px' : '2px',
-                      bottom: '2px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      transition: 'all 0.2s ease'
-                    }} />
-                  </div>
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end'
-        }}>
-          <button
-            onClick={() => handleSave('notifications')}
-            disabled={loading}
-            style={{
-              background: '#0ea5e9',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '0.75rem 2rem',
-              fontWeight: '600',
-              fontSize: '1rem',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              if (!loading) {
-                e.target.style.background = '#0284c7';
-                e.target.style.transform = 'translateY(-2px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!loading) {
-                e.target.style.background = '#0ea5e9';
-                e.target.style.transform = 'translateY(0px)';
-              }
-            }}
-          >
-            {loading ? 'Saving...' : 'Save Preferences'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderDangerZoneTab = () => (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div style={{
-        background: '#fef2f2',
-        border: '1px solid #fecaca',
-        borderRadius: '12px',
-        padding: '2rem'
-      }}>
-        <h3 style={{
-          fontSize: '1.25rem',
-          fontWeight: '700',
-          color: '#dc2626',
-          margin: '0 0 1rem 0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          ⚠️ Danger Zone
-        </h3>
-
-        <p style={{
-          color: '#737373',
-          marginBottom: '2rem',
-          fontSize: '1rem',
-          lineHeight: '1.6'
-        }}>
-          Once you delete your account, there is no going back. Please be certain.
-        </p>
-
-        <div style={{
-          background: 'white',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          marginBottom: '1.5rem'
-        }}>
-          <h4 style={{
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: '#171717',
-            margin: '0 0 0.5rem 0'
-          }}>
-            What will be deleted:
-          </h4>
-          <ul style={{
-            color: '#737373',
-            fontSize: '0.875rem',
-            lineHeight: '1.5',
-            margin: '0',
-            paddingLeft: '1.5rem'
-          }}>
-            <li>All your personal information</li>
-            <li>Transaction history</li>
-            <li>Account settings and preferences</li>
-            <li>Any pending transfers</li>
-          </ul>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-start'
-        }}>
-          <button
-            onClick={handleDeleteAccount}
-            style={{
-              background: '#dc2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '0.75rem 2rem',
-              fontWeight: '600',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = '#b91c1c';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = '#dc2626';
-              e.target.style.transform = 'translateY(0px)';
-            }}
-          >
-            Delete Account
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setSuccess('Password changed successfully! Redirecting to login...');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 2000);
+      
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  }, [passwordData, logout, navigate]);
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: '👤' },
-    { id: 'security', label: 'Security', icon: '🔒' },
-    { id: 'notifications', label: 'Notifications', icon: '🔔' },
-    { id: 'danger', label: 'Danger Zone', icon: '⚠️' }
+    { id: 'security', label: 'Security', icon: '🔒' }
   ];
 
   return (
@@ -1140,12 +171,10 @@ const UserProfile = () => {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
       padding: '2rem 1rem',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      <div style={{
-        maxWidth: '900px',
-        margin: '0 auto'
-      }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -1164,67 +193,86 @@ const UserProfile = () => {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
               marginRight: '1rem',
               fontSize: '1.25rem',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              color: '#374151'
             }}
-            onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-            onMouseOut={(e) => e.target.style.background = 'white'}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = '#f9fafb';
+              e.currentTarget.style.transform = 'translateX(-4px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
           >
             ←
           </button>
           <h1 style={{
-            fontSize: '1.75rem',
+            fontSize: '1.875rem',
             fontWeight: '700',
-            color: '#171717',
-            margin: '0'
+            color: '#111827',
+            margin: 0
           }}>
             Account Settings
           </h1>
         </div>
 
-        {/* Success Message */}
-        {saveSuccess && (
+        {/* Success/Error Messages */}
+        {success && (
           <div style={{
             background: '#f0fdf4',
-            border: '1px solid #bbf7d0',
+            border: '1px solid #86efac',
             borderRadius: '12px',
             padding: '1rem',
             marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
             animation: 'fadeIn 0.3s ease-out'
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <span style={{ fontSize: '1.25rem' }}>✅</span>
-              <span style={{ color: '#15803d', fontWeight: '600' }}>
-                Settings saved successfully!
-              </span>
-            </div>
+            <span style={{ fontSize: '1.25rem' }}>✓</span>
+            <span style={{ color: '#15803d', fontWeight: '600' }}>{success}</span>
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+            <span style={{ color: '#dc2626', fontWeight: '600' }}>{error}</span>
           </div>
         )}
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: window.innerWidth > 768 ? '250px 1fr' : '1fr',
+          gridTemplateColumns: window.innerWidth > 768 ? '200px 1fr' : '1fr',
           gap: '2rem'
         }}>
-          {/* Sidebar Navigation */}
+          
+          {/* Sidebar */}
           <div style={{
             background: 'white',
             borderRadius: '16px',
             padding: '1.5rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
             height: 'fit-content'
           }}>
             <nav style={{
               display: 'flex',
               flexDirection: window.innerWidth > 768 ? 'column' : 'row',
-              gap: '0.5rem',
-              overflowX: window.innerWidth > 768 ? 'visible' : 'auto'
+              gap: '0.5rem'
             }}>
               {tabs.map(tab => (
                 <button
@@ -1234,71 +282,302 @@ const UserProfile = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.75rem',
-                    padding: '0.75rem 1rem',
-                    background: activeTab === tab.id ? '#f0f9ff' : 'transparent',
-                    border: activeTab === tab.id ? '2px solid #0ea5e9' : '2px solid transparent',
+                    padding: '0.875rem 1rem',
+                    background: activeTab === tab.id 
+                      ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' 
+                      : 'transparent',
+                    border: activeTab === tab.id ? '2px solid #667eea' : '2px solid transparent',
                     borderRadius: '12px',
-                    color: activeTab === tab.id ? '#0ea5e9' : '#737373',
+                    color: activeTab === tab.id ? '#667eea' : '#6b7280',
                     fontWeight: activeTab === tab.id ? '600' : '500',
-                    fontSize: '0.875rem',
+                    fontSize: '0.9375rem',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     whiteSpace: 'nowrap',
-                    minWidth: window.innerWidth > 768 ? 'auto' : '120px'
+                    flex: window.innerWidth > 768 ? 'none' : '1'
                   }}
                   onMouseOver={(e) => {
                     if (activeTab !== tab.id) {
-                      e.target.style.background = '#f8fafc';
-                      e.target.style.color = '#525252';
+                      e.currentTarget.style.background = '#f9fafb';
                     }
                   }}
                   onMouseOut={(e) => {
                     if (activeTab !== tab.id) {
-                      e.target.style.background = 'transparent';
-                      e.target.style.color = '#737373';
+                      e.currentTarget.style.background = 'transparent';
                     }
                   }}
                 >
-                  <span style={{ fontSize: '1rem' }}>{tab.icon}</span>
+                  <span style={{ fontSize: '1.125rem' }}>{tab.icon}</span>
                   {tab.label}
                 </button>
               ))}
             </nav>
           </div>
 
-          {/* Main Content */}
+          {/* Content */}
           <div style={{
             background: 'white',
             borderRadius: '16px',
             padding: '2rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            minHeight: '500px'
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            minHeight: '400px'
           }}>
-            {activeTab === 'profile' && renderProfileTab()}
-            {activeTab === 'security' && renderSecurityTab()}
-            {activeTab === 'notifications' && renderNotificationsTab()}
-            {activeTab === 'danger' && renderDangerZoneTab()}
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
+              <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '2rem',
+                  paddingBottom: '2rem',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '2rem',
+                    fontWeight: '700',
+                    marginRight: '1.5rem'
+                  }}>
+                    {profileData.firstName?.[0] || 'U'}{profileData.lastName?.[0] || ''}
+                  </div>
+                  <div>
+                    <h2 style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      margin: '0 0 0.25rem 0'
+                    }}>
+                      {profileData.firstName} {profileData.lastName}
+                    </h2>
+                    <p style={{
+                      color: '#6b7280',
+                      margin: '0',
+                      fontSize: '0.875rem'
+                    }}>
+                      @{profileData.username}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '1.5rem',
+                  marginBottom: '2rem'
+                }}>
+                  <InputField
+                    label="First Name"
+                    value={profileData.firstName}
+                    onChange={(val) => handleProfileChange('firstName', val)}
+                    placeholder="John"
+                  />
+                  <InputField
+                    label="Last Name"
+                    value={profileData.lastName}
+                    onChange={(val) => handleProfileChange('lastName', val)}
+                    placeholder="Doe"
+                  />
+                  <InputField
+                    label="Username"
+                    value={profileData.username}
+                    onChange={(val) => handleProfileChange('username', val)}
+                    placeholder="johndoe"
+                  />
+                  <InputField
+                    label="Email Address"
+                    value={profileData.email}
+                    type="email"
+                    disabled={true}
+                    onChange={() => {}}
+                  />
+                  <InputField
+                    label="Phone Number"
+                    value={profileData.phoneNumber}
+                    onChange={(val) => handleProfileChange('phoneNumber', val)}
+                    placeholder="+1 (555) 123-4567"
+                  />
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end'
+                }}>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '0.875rem 2rem',
+                      fontWeight: '600',
+                      fontSize: '1rem',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.7 : 1,
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+                    }}
+                    onMouseOver={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.5)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                      }
+                    }}
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Security Tab */}
+            {activeTab === 'security' && (
+              <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '16px',
+                  padding: '2rem'
+                }}>
+                  <h3 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: '0 0 1.5rem 0'
+                  }}>
+                    Change Password
+                  </h3>
+
+                  <div style={{ display: 'grid', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <InputField
+                      label="Current Password"
+                      value={passwordData.currentPassword}
+                      onChange={(val) => handlePasswordChange('currentPassword', val)}
+                      type="password"
+                      placeholder="Enter current password"
+                    />
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '1.5rem'
+                    }}>
+                      <InputField
+                        label="New Password"
+                        value={passwordData.newPassword}
+                        onChange={(val) => handlePasswordChange('newPassword', val)}
+                        type="password"
+                        placeholder="At least 8 characters"
+                      />
+                      <InputField
+                        label="Confirm New Password"
+                        value={passwordData.confirmPassword}
+                        onChange={(val) => handlePasswordChange('confirmPassword', val)}
+                        type="password"
+                        placeholder="Re-enter new password"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: 'white',
+                    border: '2px solid #667eea',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '1.25rem',
+                      flexShrink: 0
+                    }}>
+                      🔒
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#111827', fontSize: '0.875rem', marginBottom: '0.125rem' }}>
+                        Security Notice
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        You'll be logged out after changing your password
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end'
+                  }}>
+                    <button
+                      onClick={handleSavePassword}
+                      disabled={loading || !passwordData.currentPassword || !passwordData.newPassword}
+                      style={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '0.875rem 2rem',
+                        fontWeight: '600',
+                        fontSize: '1rem',
+                        cursor: loading || !passwordData.currentPassword || !passwordData.newPassword ? 'not-allowed' : 'pointer',
+                        opacity: loading || !passwordData.currentPassword || !passwordData.newPassword ? 0.5 : 1,
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+                      }}
+                      onMouseOver={(e) => {
+                        if (!loading && passwordData.currentPassword && passwordData.newPassword) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.5)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!loading) {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                        }
+                      }}
+                    >
+                      {loading ? 'Updating...' : 'Change Password'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
-          [style*="gridTemplateColumns: 250px 1fr"] {
+          [style*="gridTemplateColumns: 200px 1fr"] {
             grid-template-columns: 1fr !important;
-          }
-          [style*="flexDirection: column"] {
-            flex-direction: row !important;
           }
         }
       `}</style>

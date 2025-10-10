@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-//import { transactionAPI } from '../api';
-import { transferAPI } from '../api';
+import { transactionAPI } from '../api';
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -11,50 +10,8 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-
-  const mockTransactions = [
-   
-    {
-      id: 2,
-      type: 'sent',
-      amount: -75.50,
-      fee: 0.76,
-      description: 'Dinner split with friends',
-      other_party_email: 'alice@example.com',
-      other_party_username: 'alice_smith',
-      status: 'completed',
-      created_at: '2025-01-09T19:15:00Z',
-      reference_id: 'TXN-002-2025'
-    },
-    {
-      id: 3,
-      type: 'sent',
-      amount: -200.00,
-      fee: 2.00,
-      description: 'Monthly rent payment',
-      other_party_email: 'landlord@rental.com',
-      other_party_username: 'landlord_office',
-      status: 'completed',
-      created_at: '2025-01-01T09:00:00Z',
-      reference_id: 'TXN-003-2025'
-    },
-   
-    {
-      id: 5,
-      type: 'sent',
-      amount: -25.00,
-      fee: 0.25,
-      description: 'Coffee with team',
-      other_party_email: 'teammate@work.com',
-      other_party_username: 'teammate',
-      status: 'pending',
-      created_at: '2025-01-11T08:30:00Z',
-      reference_id: 'TXN-005-2025'
-    }
-  ];
 
   useEffect(() => {
     if (!currentUser) {
@@ -62,48 +19,40 @@ const Transactions = () => {
       return;
     }
     fetchTransactions();
-  }, [currentUser, navigate]);
+  }, [currentUser]);
 
   useEffect(() => {
     applyFilters();
-  }, [transactions, searchTerm, filterType, filterStatus]);
+  }, [transactions, searchTerm, filterStatus]);
 
   const fetchTransactions = async () => {
-  try {
-    setLoading(true);
-    console.log('Fetching transactions from /transfers/history');
-    
-    const response = await transferAPI.getHistory();
-    console.log('Transfer history response:', response.data);
-    
-    if (response.data && Array.isArray(response.data.transfers)) {
-      setTransactions(response.data.transfers);
-      console.log(`Loaded ${response.data.transfers.length} real transactions`);
-    } else {
-      console.log('No transactions found or invalid format');
+    try {
+      setLoading(true);
+      const response = await transactionAPI.getHistory();
+      
+      if (response.data && Array.isArray(response.data.transactions)) {
+        setTransactions(response.data.transactions);
+      } else {
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching transaction history:', error);
       setTransactions([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching transaction history:', error);
-    setTransactions([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const applyFilters = () => {
     let filtered = [...transactions];
 
     if (searchTerm) {
+      const search = searchTerm.toLowerCase();
       filtered = filtered.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.other_party_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.reference_id.toLowerCase().includes(searchTerm.toLowerCase())
+        (transaction.recipient_name || transaction.recipient_email || 'Unknown').toLowerCase().includes(search) ||
+        transaction.notes?.toLowerCase().includes(search) ||
+        transaction.id?.toString().includes(search)
       );
-    }
-
-    if (filterType !== 'all') {
-      filtered = filtered.filter(transaction => transaction.type === filterType);
     }
 
     if (filterStatus !== 'all') {
@@ -113,11 +62,11 @@ const Transactions = () => {
     setFilteredTransactions(filtered);
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatCurrency = (amount, currency = 'CAD') => {
+    return new Intl.NumberFormat('en-CA', {
       style: 'currency',
-      currency: 'USD',
-    }).format(Math.abs(amount));
+      currency: currency,
+    }).format(amount);
   };
 
   const formatDate = (dateString) => {
@@ -130,223 +79,290 @@ const Transactions = () => {
     if (diffDays === 2) return 'Yesterday';
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
     
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-CA', {
       month: 'short',
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   };
 
-  const getTransactionIcon = (type, status) => {
-    if (status === 'pending') return '⏳';
-    if (status === 'failed') return '❌';
-    return type === 'received' ? '↓' : '↑';
+  const getStatusConfig = (status) => {
+    const configs = {
+      completed: {
+        color: '#22c55e',
+        background: '#f0fdf4',
+        icon: '✓',
+        label: 'Completed'
+      },
+      pending: {
+        color: '#f59e0b',
+        background: '#fffbeb',
+        icon: '⏳',
+        label: 'Pending'
+      },
+      failed: {
+        color: '#ef4444',
+        background: '#fef2f2',
+        icon: '✕',
+        label: 'Failed'
+      }
+    };
+    return configs[status] || configs.pending;
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return '#22c55e';
-      case 'pending': return '#f59e0b';
-      case 'failed': return '#ef4444';
-      default: return '#737373';
-    }
-  };
-
-  const getTransactionColor = (type) => {
-    return type === 'received' ? '#22c55e' : '#ef4444';
-  };
-
-  const TransactionModal = ({ transaction, onClose }) => (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
-    }}>
+  const TransactionModal = ({ transaction, onClose }) => {
+    const statusConfig = getStatusConfig(transaction.status);
+    
+    return (
       <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '2rem',
-        maxWidth: '500px',
-        width: '100%',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-        animation: 'modalSlideIn 0.3s ease-out'
-      }}>
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '1rem',
+        backdropFilter: 'blur(4px)'
+      }}
+      onClick={onClose}>
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem'
-        }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '700',
-            color: '#171717',
-            margin: 0
-          }}>
-            Transaction Details
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              color: '#737373',
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            onMouseOver={(e) => e.target.style.background = '#f3f4f6'}
-            onMouseOut={(e) => e.target.style.background = 'none'}
-          >
-            ×
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gap: '1.5rem' }}>
+          background: 'white',
+          borderRadius: '20px',
+          padding: '2rem',
+          maxWidth: '500px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          animation: 'modalSlideIn 0.3s ease-out',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        }}
+        onClick={(e) => e.stopPropagation()}>
+          
+          {/* Header */}
           <div style={{
             display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '0.5rem'
+            marginBottom: '2rem'
+          }}>
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: '700',
+              color: '#171717',
+              margin: 0
+            }}>
+              Transfer Details
+            </h2>
+            <button
+              onClick={onClose}
+              style={{
+                background: '#f3f4f6',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: '#737373',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.background = '#e5e7eb'}
+              onMouseOut={(e) => e.target.style.background = '#f3f4f6'}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Amount Section */}
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '16px',
+            marginBottom: '2rem',
+            color: 'white'
           }}>
             <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              background: transaction.type === 'received' ? '#f0fdf4' : '#fef2f2',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.5rem'
+              fontSize: '0.875rem',
+              opacity: 0.9,
+              marginBottom: '0.5rem'
             }}>
-              {getTransactionIcon(transaction.type, transaction.status)}
+              You sent
             </div>
-            <div>
-              <h3 style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: getTransactionColor(transaction.type),
-                margin: '0'
-              }}>
-                {transaction.type === 'received' ? '+' : '-'}{formatCurrency(transaction.amount)}
-              </h3>
-              <div style={{
-                display: 'inline-block',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '20px',
-                background: transaction.status === 'completed' ? '#f0fdf4' : 
-                           transaction.status === 'pending' ? '#fffbeb' : '#fef2f2',
-                color: getStatusColor(transaction.status),
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                marginTop: '0.25rem'
-              }}>
-                {transaction.status}
-              </div>
+            <div style={{
+              fontSize: '2.5rem',
+              fontWeight: '700',
+              marginBottom: '0.5rem'
+            }}>
+              {formatCurrency(transaction.amount, transaction.from_currency)}
+            </div>
+            <div style={{
+              fontSize: '0.875rem',
+              opacity: 0.9
+            }}>
+              Recipient gets {formatCurrency(transaction.recipient_amount, transaction.to_currency)}
             </div>
           </div>
 
-          <div style={{
-            background: '#f8fafc',
-            borderRadius: '12px',
-            padding: '1.5rem'
-          }}>
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#737373', textTransform: 'uppercase' }}>
-                  {transaction.type === 'received' ? 'From' : 'To'}
-                </label>
-                <p style={{ margin: '0.25rem 0 0 0', fontWeight: '600', color: '#171717' }}>
-                  {transaction.other_party_email}
-                </p>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#737373', textTransform: 'uppercase' }}>
-                  Description
-                </label>
-                <p style={{ margin: '0.25rem 0 0 0', color: '#171717' }}>
-                  {transaction.description}
-                </p>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#737373', textTransform: 'uppercase' }}>
-                  Date & Time
-                </label>
-                <p style={{ margin: '0.25rem 0 0 0', color: '#171717' }}>
-                  {new Date(transaction.created_at).toLocaleString()}
-                </p>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#737373', textTransform: 'uppercase' }}>
-                  Transaction ID
-                </label>
-                <p style={{ margin: '0.25rem 0 0 0', color: '#171717', fontFamily: 'monospace' }}>
-                  {transaction.reference_id}
-                </p>
-              </div>
-            </div>
-          </div>
-
+          {/* Details Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '1rem'
+            gap: '1.5rem',
+            marginBottom: '2rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid #f3f4f6'
+            }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Status</span>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '20px',
+                background: statusConfig.background,
+                color: statusConfig.color,
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}>
+                <span>{statusConfig.icon}</span>
+                <span>{statusConfig.label}</span>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid #f3f4f6'
+            }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Recipient</span>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: '600', color: '#171717' }}>
+                  {transaction.recipient_name || transaction.recipient_email || 'Unknown'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#737373' }}>
+                  {transaction.recipient_email || transaction.recipient_name || 'No email'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid #f3f4f6'
+            }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Transfer Fee</span>
+              <span style={{ fontWeight: '600', color: '#171717' }}>
+                {formatCurrency(transaction.fee, transaction.from_currency)}
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid #f3f4f6'
+            }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Exchange Rate</span>
+              <span style={{ fontWeight: '600', color: '#171717' }}>
+                {transaction.exchange_rate} {transaction.from_currency}/{transaction.to_currency}
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid #f3f4f6'
+            }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Date</span>
+              <span style={{ fontWeight: '600', color: '#171717' }}>
+                {new Date(transaction.created_at).toLocaleString('en-CA')}
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ color: '#737373', fontSize: '0.875rem' }}>Transaction ID</span>
+              <span style={{ 
+                fontFamily: 'monospace', 
+                fontSize: '0.75rem',
+                color: '#171717',
+                fontWeight: '600'
+              }}>
+                #{transaction.id}
+              </span>
+            </div>
+
+            {transaction.notes && (
+              <div style={{
+                padding: '1rem',
+                background: '#f8fafc',
+                borderRadius: '12px'
+              }}>
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#737373',
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  fontWeight: '600'
+                }}>
+                  Note
+                </div>
+                <div style={{ color: '#171717' }}>
+                  {transaction.notes}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div style={{
+            display: 'grid',
+            gap: '0.75rem'
           }}>
             <button
-              onClick={() => alert('Receipt download (Demo only)')}
-              style={{
-                background: 'white',
-                color: '#0ea5e9',
-                border: '2px solid #0ea5e9',
-                borderRadius: '12px',
-                padding: '0.75rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Download Receipt
-            </button>
-            <button
               onClick={() => {
-                navigator.clipboard.writeText(transaction.reference_id);
+                navigator.clipboard.writeText(`#${transaction.id}`);
                 alert('Transaction ID copied!');
               }}
               style={{
-                background: '#f8fafc',
-                color: '#737373',
-                border: '2px solid #e5e5e5',
+                width: '100%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
                 borderRadius: '12px',
-                padding: '0.75rem',
+                padding: '1rem',
                 fontWeight: '600',
+                fontSize: '1rem',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
               }}
+              onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
             >
-              Copy ID
+              Copy Transaction ID
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -359,9 +375,9 @@ const Transactions = () => {
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} style={{
-              height: '80px',
+              height: '90px',
               background: 'white',
-              borderRadius: '12px',
+              borderRadius: '16px',
               marginBottom: '1rem',
               animation: 'pulse 2s infinite'
             }} />
@@ -379,6 +395,7 @@ const Transactions = () => {
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
     }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -397,24 +414,78 @@ const Transactions = () => {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               marginRight: '1rem',
               fontSize: '1.25rem',
               transition: 'all 0.2s ease'
             }}
-            onMouseOver={(e) => e.target.style.background = '#f8fafc'}
-            onMouseOut={(e) => e.target.style.background = 'white'}
+            onMouseOver={(e) => {
+              e.target.style.background = '#f8fafc';
+              e.target.style.transform = 'translateX(-4px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'white';
+              e.target.style.transform = 'translateX(0)';
+            }}
           >
             ←
           </button>
-          <h1 style={{
-            fontSize: '1.75rem',
-            fontWeight: '700',
-            color: '#171717',
-            margin: '0'
+          <div>
+            <h1 style={{
+              fontSize: '1.875rem',
+              fontWeight: '700',
+              color: '#171717',
+              margin: '0 0 0.25rem 0'
+            }}>
+              Your Transfers
+            </h1>
+            <p style={{
+              color: '#737373',
+              margin: 0,
+              fontSize: '0.875rem'
+            }}>
+              View all your sent money transfers
+            </p>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1rem',
+          marginBottom: '2rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}>
-            Transaction History
-          </h1>
+            <div style={{ color: '#737373', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              Total Sent
+            </div>
+            <div style={{ fontSize: '1.875rem', fontWeight: '700', color: '#171717' }}>
+              {transactions.length}
+            </div>
+          </div>
+          
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+          }}>
+            <div style={{ opacity: 0.9, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              Total Amount
+            </div>
+            <div style={{ fontSize: '1.875rem', fontWeight: '700' }}>
+              {formatCurrency(
+                transactions.reduce((sum, t) => sum + parseFloat(t.amount || 0), 0)
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -423,13 +494,12 @@ const Transactions = () => {
           borderRadius: '16px',
           padding: '1.5rem',
           marginBottom: '2rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
         }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '1rem',
-            alignItems: 'end'
+            gap: '1rem'
           }}>
             <div>
               <label style={{
@@ -439,11 +509,11 @@ const Transactions = () => {
                 color: '#374151',
                 marginBottom: '0.5rem'
               }}>
-                Search
+                Search transfers
               </label>
               <input
                 type="text"
-                placeholder="Search transactions..."
+                placeholder="Search by recipient, email, or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -456,40 +526,9 @@ const Transactions = () => {
                   outline: 'none',
                   boxSizing: 'border-box'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#0ea5e9'}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e5e5'}
               />
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Type
-              </label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: '2px solid #e5e5e5',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  background: 'white',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="all">All Types</option>
-                <option value="sent">Sent</option>
-                <option value="received">Received</option>
-              </select>
             </div>
 
             <div>
@@ -531,134 +570,190 @@ const Transactions = () => {
           background: 'white',
           borderRadius: '16px',
           padding: '1.5rem',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
         }}>
           {filteredTransactions.length === 0 ? (
             <div style={{
               textAlign: 'center',
-              padding: '3rem',
+              padding: '4rem 2rem',
               color: '#737373'
             }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                No transactions found
+              <div style={{ 
+                fontSize: '4rem', 
+                marginBottom: '1rem',
+                opacity: 0.5
+              }}>
+                💸
+              </div>
+              <h3 style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: '600', 
+                marginBottom: '0.5rem',
+                color: '#171717'
+              }}>
+                {searchTerm || filterStatus !== 'all' ? 'No transfers found' : 'No transfers yet'}
               </h3>
-              <p>Try adjusting your search or filter criteria</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {filteredTransactions.map((transaction, index) => (
-                <div
-                  key={transaction.id}
-                  onClick={() => setSelectedTransaction(transaction)}
+              <p style={{ marginBottom: '2rem' }}>
+                {searchTerm || filterStatus !== 'all' 
+                  ? 'Try adjusting your search or filter'
+                  : 'Start sending money to see your transfer history'}
+              </p>
+              {!searchTerm && filterStatus === 'all' && (
+                <button
+                  onClick={() => navigate('/transfers')}
                   style={{
-                    padding: '1.5rem',
-                    border: '1px solid #e5e5e5',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
                     borderRadius: '12px',
+                    padding: '0.875rem 2rem',
+                    fontSize: '1rem',
+                    fontWeight: '600',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    animation: `fadeIn ${0.1 + index * 0.05}s ease-out`
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
                   }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.transform = 'translateY(0px)';
-                  }}
+                  onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                  onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem'
-                  }}>
+                  Send Money Now
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {filteredTransactions.map((transaction, index) => {
+                const statusConfig = getStatusConfig(transaction.status);
+                const recipientDisplay = transaction.recipient_name || transaction.recipient_email || 'Unknown';
+                
+                return (
+                  <div
+                    key={transaction.id}
+                    onClick={() => setSelectedTransaction(transaction)}
+                    style={{
+                      padding: '1.25rem',
+                      border: '2px solid #f3f4f6',
+                      borderRadius: '16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      animation: `fadeIn ${0.1 + index * 0.05}s ease-out`
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#667eea';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#f3f4f6';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
                     <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      background: transaction.type === 'received' ? '#f0fdf4' : '#fef2f2',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.25rem'
+                      gap: '1rem'
                     }}>
-                      {getTransactionIcon(transaction.type, transaction.status)}
-                    </div>
-
-                    <div style={{ flex: '1' }}>
                       <div style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        marginBottom: '0.25rem'
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        flexShrink: 0,
+                        color: 'white',
+                        fontWeight: '600'
                       }}>
-                        <h3 style={{
-                          fontSize: '1rem',
-                          fontWeight: '600',
-                          color: '#171717',
-                          margin: '0'
-                        }}>
-                          {transaction.description}
-                        </h3>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{
-                            fontSize: '1.25rem',
-                            fontWeight: '700',
-                            color: getTransactionColor(transaction.type),
-                            margin: '0'
-                          }}>
-                            {transaction.type === 'received' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                          </div>
-                          <div style={{
-                            display: 'inline-block',
-                            padding: '0.125rem 0.5rem',
-                            borderRadius: '12px',
-                            background: transaction.status === 'completed' ? '#f0fdf4' : 
-                                       transaction.status === 'pending' ? '#fffbeb' : '#fef2f2',
-                            color: getStatusColor(transaction.status),
-                            fontSize: '0.625rem',
-                            fontWeight: '600',
-                            textTransform: 'uppercase',
-                            marginTop: '0.25rem'
-                          }}>
-                            {transaction.status}
-                          </div>
-                        </div>
+                        {recipientDisplay.charAt(0).toUpperCase()}
                       </div>
 
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div>
-                          <p style={{
-                            color: '#737373',
-                            margin: '0',
-                            fontSize: '0.875rem'
-                          }}>
-                            {transaction.type === 'received' ? 'From: ' : 'To: '}
-                            {transaction.other_party_email}
-                          </p>
-                        </div>
-                        <p style={{
-                          color: '#737373',
-                          margin: '0',
-                          fontSize: '0.875rem'
+                      <div style={{ flex: '1', minWidth: 0 }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '0.5rem',
+                          gap: '1rem'
                         }}>
-                          {formatDate(transaction.created_at)}
-                        </p>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <h3 style={{
+                              fontSize: '1.125rem',
+                              fontWeight: '600',
+                              color: '#171717',
+                              margin: '0 0 0.25rem 0',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {recipientDisplay}
+                            </h3>
+                            <p style={{
+                              color: '#737373',
+                              margin: '0',
+                              fontSize: '0.875rem',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {transaction.recipient_email || transaction.recipient_name || 'No email'}
+                            </p>
+                          </div>
+
+                          <div style={{ 
+                            textAlign: 'right',
+                            flexShrink: 0
+                          }}>
+                            <div style={{
+                              fontSize: '1.25rem',
+                              fontWeight: '700',
+                              color: '#171717',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {formatCurrency(transaction.amount, transaction.from_currency)}
+                            </div>
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.125rem 0.625rem',
+                              borderRadius: '12px',
+                              background: statusConfig.background,
+                              color: statusConfig.color,
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              <span>{statusConfig.icon}</span>
+                              <span>{statusConfig.label}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.875rem',
+                          color: '#737373'
+                        }}>
+                          <span>
+                            {formatCurrency(transaction.recipient_amount, transaction.to_currency)} received
+                          </span>
+                          <span>
+                            {formatDate(transaction.created_at)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Transaction Modal */}
         {selectedTransaction && (
           <TransactionModal
             transaction={selectedTransaction}
@@ -667,9 +762,9 @@ const Transactions = () => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
         
@@ -679,12 +774,12 @@ const Transactions = () => {
         }
         
         @keyframes modalSlideIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
+          from { opacity: 0; transform: scale(0.95) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         @media (max-width: 640px) {
-          [style*="gridTemplateColumns: 1fr 1fr"] {
+          [style*="grid-template-columns"] {
             grid-template-columns: 1fr !important;
           }
         }
