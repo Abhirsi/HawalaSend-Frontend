@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import theme from './styles/theme';
 import Navbar from './components/Layout/Navbar';
 import Dashboard from './components/Dashboard';
-import Login from './components/Auth/Login';
+import LandingPage from './pages/LandingPage';
 import Register from './components/Auth/Register';
 import Transfers from './pages/Transfers';
 import Transactions from './pages/Transactions';
@@ -98,7 +98,7 @@ function AppContent() {
       <Box component="main" sx={{ flexGrow: 1, pt: isPublicPage ? 0 : 2, px: isPublicPage ? 0 : { xs: 1, sm: 3 } }}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><LandingPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/auth/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />

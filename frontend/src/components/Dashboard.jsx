@@ -27,6 +27,7 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Calculator state
   const [sendAmount, setSendAmount] = useState('100');
@@ -37,8 +38,14 @@ const Dashboard = () => {
 
   const currentRate = fromCountry.rates[toCountry.code];
   const receiveAmount = (parseFloat(sendAmount) || 0) * currentRate;
-  const transferFee = transactions.length >= 5 ? Math.min((parseFloat(sendAmount) || 0) * 0.005, 1) : 0;
+  const transferFee = 0; // Always free
   const totalCost = (parseFloat(sendAmount) || 0) + transferFee;
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!currentUser) {
@@ -88,7 +95,7 @@ const Dashboard = () => {
     new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
+      year: isMobile ? undefined : 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -110,34 +117,87 @@ const Dashboard = () => {
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       <div
         style={{
-          paddingTop: '80px',
           maxWidth: '1200px',
           margin: '0 auto',
-          padding: '100px 20px 40px',
+          padding: isMobile ? '20px 16px 24px' : '24px 20px 40px',
         }}
       >
-        {/* Hero Section */}
+        {/* Compact Welcome Banner */}
         <div
           style={{
-            background: 'url("/HawaSend-logo.svg") no-repeat right bottom / 180px, linear-gradient(135deg, #667eea, #764ba2)',
-            borderRadius: '20px',
-            padding: '50px 40px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '24px 32px',
             color: 'white',
-            marginBottom: '50px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-            textAlign: 'left',
+            marginBottom: '24px',
+            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.25)',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            gap: isMobile ? '12px' : '20px'
           }}
         >
-          <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold' }}>
-            Welcome back, {currentUser?.username || currentUser?.email?.split('@')[0]} 👋
-          </h1>
-          <p style={{ margin: '15px 0 0 0', fontSize: '1.2rem', opacity: 0.95 }}>
-            Send money internationally safely & instantly.
-            <br />
-            {transactions.length < 5
-              ? `${5 - transactions.length} free transfers remaining 🎉`
-              : 'Low fee: Only 0.5% capped at $1'}
-          </p>
+          <div>
+            <h2 style={{ 
+              margin: '0 0 8px 0', 
+              fontSize: isMobile ? '1.25rem' : '1.5rem', 
+              fontWeight: '700',
+              lineHeight: 1.2
+            }}>
+              Welcome back, {currentUser?.username || currentUser?.email?.split('@')[0]}! 👋
+            </h2>
+            <p style={{ 
+              margin: 0, 
+              fontSize: isMobile ? '0.875rem' : '0.9375rem', 
+              opacity: 0.95,
+              lineHeight: 1.4
+            }}>
+              Send money internationally with zero fees and the best exchange rates
+            </p>
+          </div>
+          <div style={{
+            display: 'flex',
+            gap: isMobile ? '8px' : '12px',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              padding: isMobile ? '8px 12px' : '10px 16px',
+              borderRadius: '8px',
+              fontSize: isMobile ? '0.75rem' : '0.8125rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}>
+              ✨ FREE Transfers
+            </div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              padding: isMobile ? '8px 12px' : '10px 16px',
+              borderRadius: '8px',
+              fontSize: isMobile ? '0.75rem' : '0.8125rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}>
+              ⚡ Instant Delivery
+            </div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              padding: isMobile ? '8px 12px' : '10px 16px',
+              borderRadius: '8px',
+              fontSize: isMobile ? '0.75rem' : '0.8125rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}>
+              💰 Best Rates
+            </div>
+          </div>
         </div>
 
         {/* Transfer Calculator */}
@@ -145,12 +205,18 @@ const Dashboard = () => {
           style={{
             backgroundColor: 'white',
             borderRadius: '16px',
-            padding: '30px',
-            marginBottom: '40px',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+            padding: isMobile ? '20px' : '30px',
+            marginBottom: isMobile ? '24px' : '32px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           }}
         >
-          <h2 style={{ margin: '0 0 25px 0', fontSize: '1.5rem', color: '#1f2937', textAlign: 'center' }}>
+          <h2 style={{ 
+            margin: '0 0 20px 0', 
+            fontSize: isMobile ? '1.25rem' : '1.5rem', 
+            color: '#1f2937', 
+            textAlign: 'center',
+            fontWeight: '700'
+          }}>
             💱 Transfer Calculator
           </h2>
 
@@ -158,17 +224,23 @@ const Dashboard = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr',
-              gap: '20px',
-              marginBottom: '20px',
+              gridTemplateColumns: '1fr',
+              gap: isMobile ? '16px' : '20px',
+              marginBottom: isMobile ? '16px' : '20px',
             }}
           >
             {/* Send Input */}
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#6b7280', fontSize: '0.875rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: '600', 
+                color: '#6b7280', 
+                fontSize: '0.875rem' 
+              }}>
                 You Send
               </label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -177,8 +249,8 @@ const Dashboard = () => {
                   placeholder="100"
                   style={{
                     flex: 1,
-                    padding: '14px',
-                    fontSize: '1.25rem',
+                    padding: isMobile ? '12px' : '14px',
+                    fontSize: isMobile ? '1.125rem' : '1.25rem',
                     fontWeight: '700',
                     border: '2px solid #e2e8f0',
                     borderRadius: '12px',
@@ -198,23 +270,23 @@ const Dashboard = () => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '14px 16px',
-                      fontSize: '1rem',
+                      gap: '6px',
+                      padding: isMobile ? '12px 10px' : '14px 16px',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
                       fontWeight: '700',
                       border: '2px solid #e2e8f0',
                       borderRadius: '12px',
                       background: '#f8fafc',
                       cursor: 'pointer',
-                      minWidth: '120px',
+                      minWidth: isMobile ? '95px' : '120px',
                       transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => e.currentTarget.style.borderColor = '#667eea'}
                     onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
                   >
-                    <img src={fromCountry.flag} alt={fromCountry.name} width="24" height="18" style={{ borderRadius: '2px' }} />
+                    <img src={fromCountry.flag} alt={fromCountry.name} width={isMobile ? "20" : "24"} height={isMobile ? "15" : "18"} style={{ borderRadius: '2px' }} />
                     <span>{fromCountry.code}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>▼</span>
+                    <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>▼</span>
                   </button>
 
                   {showFromDropdown && (
@@ -226,10 +298,10 @@ const Dashboard = () => {
                       background: 'white',
                       border: '2px solid #e5e7eb',
                       borderRadius: '12px',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
                       zIndex: 1000,
-                      minWidth: '220px',
-                      maxHeight: '320px',
+                      minWidth: isMobile ? '200px' : '220px',
+                      maxHeight: '280px',
                       overflowY: 'auto'
                     }}>
                       {SENDING_COUNTRIES.map((country) => (
@@ -244,8 +316,8 @@ const Dashboard = () => {
                             width: '100%',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
+                            gap: '10px',
+                            padding: isMobile ? '10px 12px' : '12px 16px',
                             border: 'none',
                             background: fromCountry.code === country.code ? '#f0f9ff' : 'white',
                             cursor: 'pointer',
@@ -256,10 +328,10 @@ const Dashboard = () => {
                           onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
                           onMouseOut={(e) => e.currentTarget.style.background = fromCountry.code === country.code ? '#f0f9ff' : 'white'}
                         >
-                          <img src={country.flag} alt={country.name} width="28" height="21" style={{ borderRadius: '3px' }} />
-                          <div>
-                            <div style={{ fontWeight: '600', fontSize: '0.9375rem', color: '#111827' }}>{country.name}</div>
-                            <div style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>{country.code}</div>
+                          <img src={country.flag} alt={country.name} width="24" height="18" style={{ borderRadius: '3px' }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600', fontSize: isMobile ? '0.875rem' : '0.9375rem', color: '#111827' }}>{country.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{country.code}</div>
                           </div>
                         </button>
                       ))}
@@ -271,20 +343,28 @@ const Dashboard = () => {
 
             {/* Receive */}
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#6b7280', fontSize: '0.875rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: '600', 
+                color: '#6b7280', 
+                fontSize: '0.875rem' 
+              }}>
                 They Receive
               </label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <div
                   style={{
                     flex: 1,
-                    padding: '14px',
-                    fontSize: '1.25rem',
+                    padding: isMobile ? '12px' : '14px',
+                    fontSize: isMobile ? '1.125rem' : '1.25rem',
                     fontWeight: '700',
                     border: '2px solid #86efac',
                     borderRadius: '12px',
                     backgroundColor: '#f0fdf4',
-                    color: '#15803d'
+                    color: '#15803d',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                 >
                   {receiveAmount.toLocaleString('en-US', {
@@ -302,24 +382,24 @@ const Dashboard = () => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '14px 16px',
-                      fontSize: '1rem',
+                      gap: '6px',
+                      padding: isMobile ? '12px 10px' : '14px 16px',
+                      fontSize: isMobile ? '0.875rem' : '1rem',
                       fontWeight: '700',
                       border: '2px solid #86efac',
                       borderRadius: '12px',
                       background: '#f0fdf4',
                       color: '#15803d',
                       cursor: 'pointer',
-                      minWidth: '120px',
+                      minWidth: isMobile ? '95px' : '120px',
                       transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => e.currentTarget.style.borderColor = '#15803d'}
                     onMouseOut={(e) => e.currentTarget.style.borderColor = '#86efac'}
                   >
-                    <img src={toCountry.flag} alt={toCountry.name} width="24" height="18" style={{ borderRadius: '2px' }} />
+                    <img src={toCountry.flag} alt={toCountry.name} width={isMobile ? "20" : "24"} height={isMobile ? "15" : "18"} style={{ borderRadius: '2px' }} />
                     <span>{toCountry.code}</span>
-                    <span style={{ fontSize: '0.75rem' }}>▼</span>
+                    <span style={{ fontSize: '0.65rem' }}>▼</span>
                   </button>
 
                   {showToDropdown && (
@@ -331,9 +411,9 @@ const Dashboard = () => {
                       background: 'white',
                       border: '2px solid #e5e7eb',
                       borderRadius: '12px',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
                       zIndex: 1000,
-                      minWidth: '220px'
+                      minWidth: isMobile ? '200px' : '220px'
                     }}>
                       {RECEIVING_COUNTRIES.map((country) => (
                         <button
@@ -347,8 +427,8 @@ const Dashboard = () => {
                             width: '100%',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
+                            gap: '10px',
+                            padding: isMobile ? '10px 12px' : '12px 16px',
                             border: 'none',
                             background: toCountry.code === country.code ? '#f0fdf4' : 'white',
                             cursor: 'pointer',
@@ -359,10 +439,10 @@ const Dashboard = () => {
                           onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
                           onMouseOut={(e) => e.currentTarget.style.background = toCountry.code === country.code ? '#f0fdf4' : 'white'}
                         >
-                          <img src={country.flag} alt={country.name} width="28" height="21" style={{ borderRadius: '3px' }} />
-                          <div>
-                            <div style={{ fontWeight: '600', fontSize: '0.9375rem', color: '#111827' }}>{country.name}</div>
-                            <div style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>{country.code}</div>
+                          <img src={country.flag} alt={country.name} width="24" height="18" style={{ borderRadius: '3px' }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600', fontSize: isMobile ? '0.875rem' : '0.9375rem', color: '#111827' }}>{country.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{country.code}</div>
                           </div>
                         </button>
                       ))}
@@ -378,36 +458,37 @@ const Dashboard = () => {
             <div
               style={{
                 backgroundColor: '#f1f5f9',
-                padding: '18px',
+                padding: isMobile ? '14px' : '18px',
                 borderRadius: '12px',
-                marginBottom: '20px',
+                marginBottom: isMobile ? '16px' : '20px',
+                fontSize: isMobile ? '0.875rem' : '1rem'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: '#6b7280' }}>Amount:</span>
                 <span style={{ fontWeight: '600' }}>{formatCurrency(sendAmount, fromCountry.code)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: '#6b7280' }}>Fee:</span>
-                <span style={{ color: transferFee === 0 ? '#10b981' : '#111827', fontWeight: '600' }}>
-                  {transferFee === 0 ? 'FREE' : formatCurrency(transferFee, fromCountry.code)}
+                <span style={{ color: '#10b981', fontWeight: '700' }}>
+                  FREE ✨
                 </span>
               </div>
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  paddingTop: '12px',
+                  paddingTop: '10px',
                   borderTop: '2px solid #cbd5e1',
                   fontWeight: '700',
-                  fontSize: '1.1rem'
+                  fontSize: isMobile ? '1rem' : '1.1rem'
                 }}
               >
-                <span>Total Cost:</span>
+                <span>Total:</span>
                 <span style={{ color: '#667eea' }}>{formatCurrency(totalCost, fromCountry.code)}</span>
               </div>
-              <div style={{ marginTop: '12px', fontSize: '0.875rem', color: '#6b7280', textAlign: 'center' }}>
-                Exchange Rate: 1 {fromCountry.code} = {currentRate.toFixed(2)} {toCountry.code}
+              <div style={{ marginTop: '10px', fontSize: '0.8125rem', color: '#6b7280', textAlign: 'center' }}>
+                Rate: 1 {fromCountry.code} = {currentRate.toFixed(2)} {toCountry.code}
               </div>
             </div>
           )}
@@ -416,12 +497,12 @@ const Dashboard = () => {
             onClick={() => navigate('/transfer')}
             style={{
               width: '100%',
-              padding: '16px',
+              padding: isMobile ? '14px' : '16px',
               background: 'linear-gradient(135deg, #667eea, #764ba2)',
               color: 'white',
               border: 'none',
               borderRadius: '12px',
-              fontSize: '1.0625rem',
+              fontSize: isMobile ? '1rem' : '1.0625rem',
               fontWeight: '700',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -445,23 +526,24 @@ const Dashboard = () => {
           style={{
             backgroundColor: 'white',
             borderRadius: '16px',
-            padding: '30px',
-            marginBottom: '40px',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+            padding: isMobile ? '20px' : '30px',
+            marginBottom: isMobile ? '24px' : '32px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Recent Transactions</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: isMobile ? '1.25rem' : '1.5rem', fontWeight: '700' }}>Recent Transactions</h2>
             {transactions.length > 5 && (
               <button
                 onClick={() => navigate('/transactions')}
                 style={{
-                  padding: '8px 16px',
+                  padding: '6px 12px',
                   backgroundColor: '#f3f4f6',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: '600',
+                  fontSize: '0.875rem',
                   transition: 'all 0.2s ease'
                 }}
                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
@@ -472,9 +554,9 @@ const Dashboard = () => {
             )}
           </div>
           {loading && <p style={{ textAlign: 'center', color: '#6b7280' }}>Loading...</p>}
-          {error && <p style={{ textAlign: 'center', color: '#ef4444' }}>{error}</p>}
+          {error && <p style={{ textAlign: 'center', color: '#ef4444', fontSize: isMobile ? '0.875rem' : '1rem' }}>{error}</p>}
           {!loading && !error && transactions.length === 0 && (
-            <p style={{ textAlign: 'center', color: '#6b7280', padding: '40px 0' }}>
+            <p style={{ textAlign: 'center', color: '#6b7280', padding: isMobile ? '24px 0' : '40px 0', fontSize: isMobile ? '0.875rem' : '1rem' }}>
               No transactions yet. Start your first transfer!
             </p>
           )}
@@ -484,28 +566,29 @@ const Dashboard = () => {
               <div
                 key={tx.id}
                 style={{
-                  padding: '20px',
+                  padding: isMobile ? '14px 0' : '20px 0',
                   borderBottom: '1px solid #e5e7eb',
                   display: 'flex',
                   justifyContent: 'space-between',
+                  gap: '12px'
                 }}
               >
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                    To: {tx.recipient_name || tx.recipient_email}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: '600', fontSize: isMobile ? '0.9375rem' : '1rem', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tx.recipient_name || tx.recipient_email}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>{formatDate(tx.created_at)}</div>
+                  <div style={{ fontSize: isMobile ? '0.8125rem' : '0.875rem', color: '#6b7280' }}>{formatDate(tx.created_at)}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '6px' }}>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontWeight: '700', fontSize: isMobile ? '1rem' : '1.1rem', marginBottom: '4px' }}>
                     {formatCurrency(tx.amount, tx.from_currency)}
                   </div>
                   <div
                     style={{
                       display: 'inline-block',
-                      padding: '4px 12px',
+                      padding: isMobile ? '3px 8px' : '4px 12px',
                       borderRadius: '12px',
-                      fontSize: '0.75rem',
+                      fontSize: isMobile ? '0.6875rem' : '0.75rem',
                       fontWeight: '700',
                       backgroundColor: getStatusColor(tx.status) + '20',
                       color: getStatusColor(tx.status),
@@ -521,24 +604,26 @@ const Dashboard = () => {
         {/* Trust Indicators */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: window.innerWidth > 768 ? 'repeat(3, 1fr)' : '1fr', 
-          gap: '20px' 
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
+          gap: isMobile ? '12px' : '16px' 
         }}>
-          <div style={{ background: 'white', borderRadius: '12px', padding: '25px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🔒</div>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.125rem' }}>Bank-Level Security</h3>
-            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.875rem' }}>256-bit encryption protects your data</p>
-          </div>
-          <div style={{ background: 'white', borderRadius: '12px', padding: '25px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚡</div>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.125rem' }}>Lightning Fast</h3>
-            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.875rem' }}>Money delivered in minutes</p>
-          </div>
-          <div style={{ background: 'white', borderRadius: '12px', padding: '25px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🏛️</div>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.125rem' }}>Licensed & Insured</h3>
-            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.875rem' }}>Regulated money service business</p>
-          </div>
+          {[
+            { icon: '🔒', title: 'Bank-Level Security', desc: '256-bit encryption' },
+            { icon: '⚡', title: 'Lightning Fast', desc: 'Money in minutes' },
+            { icon: '🏛️', title: 'Licensed & Insured', desc: 'Regulated business' }
+          ].map((item, idx) => (
+            <div key={idx} style={{ 
+              background: 'white', 
+              borderRadius: '12px', 
+              padding: isMobile ? '16px' : '20px', 
+              textAlign: 'center', 
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)' 
+            }}>
+              <div style={{ fontSize: isMobile ? '2rem' : '2.5rem', marginBottom: '8px' }}>{item.icon}</div>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: isMobile ? '0.9375rem' : '1rem', fontWeight: '700' }}>{item.title}</h3>
+              <p style={{ color: '#6b7280', margin: 0, fontSize: isMobile ? '0.8125rem' : '0.875rem' }}>{item.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
