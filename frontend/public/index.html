@@ -1,20 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Essential Meta Tags -->
     <meta charset="utf-8" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="%PUBLIC_URL%/hawalasend-logo.png"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#1A73E8" />
-    <meta
-      name="description"
-      content="HawalaSend – Fast and secure money transfers from Canada to Kenya."
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <title>HawalaSend</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Primary Meta Tags -->
+    <title>TapTap Send - Send Money Home in Seconds | Zero Fees, Best Exchange Rates</title>
+    <meta name="title" content="TapTap Send - Send Money Home in Seconds | Zero Fees, Best Exchange Rates" />
+    <meta name="description" content="Send money from Canada, USA, UK, and Europe to Kenya, Somalia, Uganda, and Ethiopia. Zero fees, best exchange rates, instant delivery. Licensed money transfer service." />
+    <meta name="keywords" content="money transfer, send money to Kenya, send money to Somalia, remittance, international money transfer, hawala, money transfer Canada, zero fees" />
+    <meta name="author" content="TapTap Send" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="msapplication-navbutton-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Open Graph / Facebook Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://taptapsend.com/" />
+    <meta property="og:title" content="TapTap Send - Send Money Home in Seconds" />
+    <meta property="og:description" content="Zero fees • Best exchange rates • Instant delivery. Send money to Kenya, Somalia, Uganda, and Ethiopia from 8 countries." />
+    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://taptapsend.com/" />
+    <meta name="twitter:title" content="TapTap Send - Send Money Home in Seconds" />
+    <meta name="twitter:description" content="Zero fees • Best exchange rates • Instant delivery. Send money internationally with confidence." />
+    <meta name="twitter:image" content="%PUBLIC_URL%/twitter-image.png" />
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Fonts - Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="%PUBLIC_URL%/Hawalasend_logo.svg" as="image" />
+    
+    <!-- DNS Prefetch for External Resources -->
+    <link rel="dns-prefetch" href="https://flagcdn.com" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    
+    <!-- Structured Data - JSON-LD for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FinancialService",
+      "name": "TapTap Send",
+      "description": "International money transfer service with zero fees and best exchange rates",
+      "url": "https://Hawalasend.com",
+      "logo": "https://Hawalasend.com/logo.png",
+      "telephone": "+1-800-XXX-XXXX",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Your Street",
+        "addressLocality": "Your City",
+        "addressRegion": "BC",
+        "postalCode": "XXX XXX",
+        "addressCountry": "CA"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "49.2827",
+        "longitude": "-123.1207"
+      },
+      "sameAs": [
+        "https://www.facebook.com/Hawalasend",
+        "https://twitter.com/Hawalasend",
+        "https://www.instagram.com/Hawalasend"
+      ],
+      "priceRange": "$0",
+      "currenciesAccepted": "CAD, USD, GBP, EUR, CHF, SEK, NOK, DKK",
+      "paymentAccepted": "Credit Card, Debit Card, Bank Transfer",
+      "availableLanguage": ["English", "French", "Somali", "Swahili"]
+    }
+    </script>
+    
+    <!-- iOS Web App Configuration -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="TapTap Send" />
+    
+    <!-- Windows Tiles -->
+    <meta name="msapplication-TileColor" content="#667eea" />
+    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/mstile-144x144.png" />
+    
+    <style>
+      /* Critical CSS - Prevents Flash of Unstyled Content */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+      }
+      
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Loading Spinner */
+      .app-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        z-index: 9999;
+      }
+      
+      .app-loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Hide loading when app loads */
+      .app-loaded .app-loading {
+        display: none;
+      }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <!-- No JavaScript Fallback -->
+    <noscript>
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      ">
+        <div style="font-size: 4rem; margin-bottom: 20px;">⚠️</div>
+        <h1 style="font-size: 2rem; margin: 0 0 20px 0;">JavaScript Required</h1>
+        <p style="font-size: 1.125rem; max-width: 500px; line-height: 1.6;">
+          Hawala Send requires JavaScript to run. Please enable JavaScript in your browser settings to use our money transfer service.
+        </p>
+      </div>
+    </noscript>
+    
+    <!-- Loading Screen -->
+    <div class="app-loading">
+      <div class="app-loading-spinner"></div>
+    </div>
+    
+    <!-- React Root -->
     <div id="root"></div>
+    
+    <!-- Remove loading screen when app mounts -->
+    <script>
+      window.addEventListener('load', function() {
+        document.body.classList.add('app-loaded');
+      });
+    </script>
   </body>
 </html>

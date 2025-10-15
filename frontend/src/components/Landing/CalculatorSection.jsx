@@ -13,12 +13,12 @@ const SENDING_COUNTRIES = [
 
 const RECEIVING_COUNTRIES = [
   { code: 'KES', name: 'Kenya', flag: 'https://flagcdn.com/w40/ke.png' },
-  { code: 'SOS', name: 'Somalia', flag: 'https://flagcdn.com/w40/so.png' },
+  { code: 'USD', name: 'Somalia', flag: 'https://flagcdn.com/w40/so.png' },
   { code: 'UGX', name: 'Uganda', flag: 'https://flagcdn.com/w40/ug.png' },
   { code: 'ETB', name: 'Ethiopia', flag: 'https://flagcdn.com/w40/et.png' }
 ];
 
-const CalculatorSection = ({ onGetStarted }) => {
+const CalculatorSection = ({ onGetStarted, isMobile }) => {
   const [sendAmount, setSendAmount] = useState('100');
   const [fromCountry, setFromCountry] = useState(SENDING_COUNTRIES[0]);
   const [toCountry, setToCountry] = useState(RECEIVING_COUNTRIES[0]);
@@ -38,27 +38,27 @@ const CalculatorSection = ({ onGetStarted }) => {
   return (
     <div style={{
       maxWidth: '600px',
-      margin: '0 auto 60px auto',
+      margin: isMobile ? '0 auto 40px auto' : '0 auto 60px auto',
       background: 'white',
-      borderRadius: '24px',
-      padding: window.innerWidth > 768 ? '40px' : '28px',
+      borderRadius: isMobile ? '20px' : '24px',
+      padding: isMobile ? '24px 20px' : '40px',
       boxShadow: '0 25px 70px rgba(0, 0, 0, 0.3)'
     }}>
       <h2 style={{
-        fontSize: '1.5rem',
+        fontSize: isMobile ? '1.25rem' : '1.5rem',
         fontWeight: '700',
         color: '#1f2937',
-        margin: '0 0 24px 0',
+        margin: '0 0 20px 0',
         textAlign: 'center'
       }}>
-        💱 Live Exchange Rate Calculator
+        💱 Live Exchange Calculator
       </h2>
 
       {/* From Section */}
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
         <label style={{
           display: 'block',
-          fontSize: '0.875rem',
+          fontSize: '0.8125rem',
           fontWeight: '600',
           color: '#6b7280',
           marginBottom: '8px'
@@ -68,8 +68,8 @@ const CalculatorSection = ({ onGetStarted }) => {
         
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 140px',
-          gap: '12px'
+          gridTemplateColumns: isMobile ? '1fr 110px' : '1fr 140px',
+          gap: isMobile ? '8px' : '12px'
         }}>
           <input
             type="text"
@@ -78,10 +78,10 @@ const CalculatorSection = ({ onGetStarted }) => {
             onChange={handleAmountChange}
             style={{
               width: '100%',
-              padding: '16px',
+              padding: isMobile ? '14px 12px' : '16px',
               border: '2px solid #e5e7eb',
               borderRadius: '12px',
-              fontSize: '1.5rem',
+              fontSize: isMobile ? '1.25rem' : '1.5rem',
               fontWeight: '700',
               color: '#111827',
               outline: 'none',
@@ -103,23 +103,23 @@ const CalculatorSection = ({ onGetStarted }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                padding: '16px 14px',
+                gap: isMobile ? '6px' : '8px',
+                padding: isMobile ? '14px 10px' : '16px 14px',
                 background: '#f9fafb',
                 border: '2px solid #e5e7eb',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 width: '100%',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.875rem' : '1rem',
                 fontWeight: '700'
               }}
               onMouseOver={(e) => e.currentTarget.style.borderColor = '#667eea'}
               onMouseOut={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
             >
-              <img src={fromCountry.flag} alt={fromCountry.name} width="24" height="18" style={{ borderRadius: '2px' }} />
+              <img src={fromCountry.flag} alt={fromCountry.name} width={isMobile ? "20" : "24"} height={isMobile ? "15" : "18"} style={{ borderRadius: '2px' }} />
               <span>{fromCountry.code}</span>
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>▼</span>
+              <span style={{ fontSize: '0.625rem', color: '#9ca3af' }}>▼</span>
             </button>
 
             {showFromDropdown && (
@@ -127,14 +127,14 @@ const CalculatorSection = ({ onGetStarted }) => {
                 position: 'absolute',
                 top: '100%',
                 right: 0,
-                marginTop: '8px',
+                marginTop: '6px',
                 background: 'white',
                 border: '2px solid #e5e7eb',
                 borderRadius: '12px',
                 boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
                 zIndex: 1000,
-                minWidth: '240px',
-                maxHeight: '320px',
+                minWidth: isMobile ? '200px' : '240px',
+                maxHeight: isMobile ? '250px' : '320px',
                 overflowY: 'auto'
               }}>
                 {SENDING_COUNTRIES.map((country) => (
@@ -149,8 +149,8 @@ const CalculatorSection = ({ onGetStarted }) => {
                       width: '100%',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 16px',
+                      gap: isMobile ? '10px' : '12px',
+                      padding: isMobile ? '10px 12px' : '12px 16px',
                       border: 'none',
                       background: fromCountry.code === country.code ? '#f0f9ff' : 'white',
                       cursor: 'pointer',
@@ -161,10 +161,10 @@ const CalculatorSection = ({ onGetStarted }) => {
                     onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
                     onMouseOut={(e) => e.currentTarget.style.background = fromCountry.code === country.code ? '#f0f9ff' : 'white'}
                   >
-                    <img src={country.flag} alt={country.name} width="28" height="21" style={{ borderRadius: '3px' }} />
+                    <img src={country.flag} alt={country.name} width={isMobile ? "24" : "28"} height={isMobile ? "18" : "21"} style={{ borderRadius: '3px' }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', fontSize: '0.9375rem', color: '#111827' }}>{country.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{country.code}</div>
+                      <div style={{ fontWeight: '600', fontSize: isMobile ? '0.875rem' : '0.9375rem', color: '#111827' }}>{country.name}</div>
+                      <div style={{ fontSize: isMobile ? '0.6875rem' : '0.75rem', color: '#9ca3af' }}>{country.code}</div>
                     </div>
                   </button>
                 ))}
@@ -175,10 +175,10 @@ const CalculatorSection = ({ onGetStarted }) => {
       </div>
 
       {/* To Section */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
         <label style={{
           display: 'block',
-          fontSize: '0.875rem',
+          fontSize: '0.8125rem',
           fontWeight: '600',
           color: '#6b7280',
           marginBottom: '8px'
@@ -188,19 +188,22 @@ const CalculatorSection = ({ onGetStarted }) => {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 140px',
-          gap: '12px'
+          gridTemplateColumns: isMobile ? '1fr 110px' : '1fr 140px',
+          gap: isMobile ? '8px' : '12px'
         }}>
           <div style={{
             width: '100%',
-            padding: '16px',
+            padding: isMobile ? '14px 12px' : '16px',
             background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
             border: '2px solid #86efac',
             borderRadius: '12px',
-            fontSize: '1.5rem',
+            fontSize: isMobile ? '1.25rem' : '1.5rem',
             fontWeight: '700',
             color: '#15803d',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
           }}>
             {receiveAmount.toLocaleString('en-US', {
               minimumFractionDigits: 2,
@@ -219,24 +222,24 @@ const CalculatorSection = ({ onGetStarted }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                padding: '16px 14px',
+                gap: isMobile ? '6px' : '8px',
+                padding: isMobile ? '14px 10px' : '16px 14px',
                 background: '#f0fdf4',
                 border: '2px solid #86efac',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 width: '100%',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.875rem' : '1rem',
                 fontWeight: '700',
                 color: '#15803d'
               }}
               onMouseOver={(e) => e.currentTarget.style.borderColor = '#15803d'}
               onMouseOut={(e) => e.currentTarget.style.borderColor = '#86efac'}
             >
-              <img src={toCountry.flag} alt={toCountry.name} width="24" height="18" style={{ borderRadius: '2px' }} />
+              <img src={toCountry.flag} alt={toCountry.name} width={isMobile ? "20" : "24"} height={isMobile ? "15" : "18"} style={{ borderRadius: '2px' }} />
               <span>{toCountry.code}</span>
-              <span style={{ fontSize: '0.75rem' }}>▼</span>
+              <span style={{ fontSize: '0.625rem' }}>▼</span>
             </button>
 
             {showToDropdown && (
@@ -244,13 +247,13 @@ const CalculatorSection = ({ onGetStarted }) => {
                 position: 'absolute',
                 top: '100%',
                 right: 0,
-                marginTop: '8px',
+                marginTop: '6px',
                 background: 'white',
                 border: '2px solid #e5e7eb',
                 borderRadius: '12px',
                 boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
                 zIndex: 1000,
-                minWidth: '240px'
+                minWidth: isMobile ? '200px' : '240px'
               }}>
                 {RECEIVING_COUNTRIES.map((country) => (
                   <button
@@ -264,8 +267,8 @@ const CalculatorSection = ({ onGetStarted }) => {
                       width: '100%',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 16px',
+                      gap: isMobile ? '10px' : '12px',
+                      padding: isMobile ? '10px 12px' : '12px 16px',
                       border: 'none',
                       background: toCountry.code === country.code ? '#f0fdf4' : 'white',
                       cursor: 'pointer',
@@ -276,10 +279,10 @@ const CalculatorSection = ({ onGetStarted }) => {
                     onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
                     onMouseOut={(e) => e.currentTarget.style.background = toCountry.code === country.code ? '#f0fdf4' : 'white'}
                   >
-                    <img src={country.flag} alt={country.name} width="28" height="21" style={{ borderRadius: '3px' }} />
+                    <img src={country.flag} alt={country.name} width={isMobile ? "24" : "28"} height={isMobile ? "18" : "21"} style={{ borderRadius: '3px' }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', fontSize: '0.9375rem', color: '#111827' }}>{country.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{country.code}</div>
+                      <div style={{ fontWeight: '600', fontSize: isMobile ? '0.875rem' : '0.9375rem', color: '#111827' }}>{country.name}</div>
+                      <div style={{ fontSize: isMobile ? '0.6875rem' : '0.75rem', color: '#9ca3af' }}>{country.code}</div>
                     </div>
                   </button>
                 ))}
@@ -290,20 +293,20 @@ const CalculatorSection = ({ onGetStarted }) => {
       </div>
 
       <div style={{
-        padding: '16px',
+        padding: isMobile ? '14px' : '16px',
         background: '#f9fafb',
         borderRadius: '12px',
-        fontSize: '0.875rem',
+        fontSize: isMobile ? '0.8125rem' : '0.875rem',
         color: '#6b7280',
         textAlign: 'center',
         lineHeight: '1.6',
-        marginBottom: '24px'
+        marginBottom: isMobile ? '16px' : '24px'
       }}>
-        <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '6px', color: '#111827' }}>
+        <div style={{ fontWeight: '600', fontSize: isMobile ? '0.9375rem' : '1rem', marginBottom: '6px', color: '#111827' }}>
           1 {fromCountry.code} = {currentRate.toFixed(2)} {toCountry.code}
         </div>
-        <div style={{ fontWeight: '700', color: '#10b981', fontSize: '0.9375rem' }}>
-          ✨ Zero Fees • ⚡ Arrives Instantly
+        <div style={{ fontWeight: '700', color: '#10b981', fontSize: isMobile ? '0.875rem' : '0.9375rem' }}>
+          ✨ Zero Fees • ⚡ Instant
         </div>
       </div>
 
@@ -311,12 +314,12 @@ const CalculatorSection = ({ onGetStarted }) => {
         onClick={onGetStarted}
         style={{
           width: '100%',
-          padding: '16px',
+          padding: isMobile ? '14px' : '16px',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           border: 'none',
           borderRadius: '12px',
-          fontSize: '1.125rem',
+          fontSize: isMobile ? '1rem' : '1.125rem',
           fontWeight: '700',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
