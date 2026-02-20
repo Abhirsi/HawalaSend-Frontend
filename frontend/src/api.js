@@ -8,7 +8,7 @@ process.env.REACT_APP_API_URL ||
     : 'https://hawalasend-backend.up.railway.app');
   const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
   withCredentials: true, // Essential for HttpOnly cookies
   headers: {
     'Content-Type': 'application/json',
@@ -201,6 +201,7 @@ export const authAPI = {
     
     try {
       const response = await api.post('/auth/forgot-password', { email });
+      timeout: 30000 // 30 seconds timeout
       
       console.log('✅ Password reset email sent');
       
@@ -210,6 +211,8 @@ export const authAPI = {
       throw error;
     }
   },
+
+  
    
   resetPassword: async (token, newPassword) => {
     console.log('🔒 Resetting password with token');
@@ -226,6 +229,31 @@ export const authAPI = {
     }
   }
 }; 
+
+// Add these functions
+export const verifyEmail = async (token) => {
+  try {
+    console.log('📧 Verifying email');
+    const response = await api.post('/auth/verify-email', { token });
+    console.log('✅ Email verified');
+    return response;
+  } catch (error) {
+    console.error('❌ Email verification failed:', error.message);
+    throw error;
+  }
+};
+
+export const resendVerification = async () => {
+  try {
+    console.log('📧 Resending verification email');
+    const response = await api.post('/auth/resend-verification');
+    console.log('✅ Verification email resent');
+    return response;
+  } catch (error) {
+    console.error('❌ Resend verification failed:', error.message);
+    throw error;
+  }
+};
 
 
 // Transaction/Transfer API
